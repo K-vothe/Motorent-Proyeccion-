@@ -61,6 +61,7 @@ test("Debe rechazar un identifier con espacios", () => {
         ok: false,
         message: mensajeError
     });
+    console.log("mensajeError:",resultado.responseBody);
 });
 
 test("Debe rechazar un identifier que no sea texto", () => {

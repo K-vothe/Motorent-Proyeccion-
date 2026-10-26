@@ -26,7 +26,9 @@ test("Debe rechazar una moto sin marca", async () => {
       );
       return true;
     }
+
   );
+
 });
 
 test("Debe rechazar una moto del año 2005", async () => {

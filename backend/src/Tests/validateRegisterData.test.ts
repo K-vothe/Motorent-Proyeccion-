@@ -49,6 +49,8 @@ test("Debe rechazar un username vacío", () => {
         username: ""
     });
 
+    console.log("Mensajeerror:", resultado.responseBody);
+
     assert.strictEqual(resultado.statusCode, 400);
     assert.strictEqual(resultado.next.mock.callCount(), 0);
     assert.deepStrictEqual(resultado.responseBody, {
@@ -62,6 +64,8 @@ test("Debe rechazar un username que no sea texto", () => {
         ...datosValidos,
         username: 123
     });
+
+    console.log("Mensajeerror:", resultado.responseBody);
 
     assert.strictEqual(resultado.statusCode, 400);
     assert.strictEqual(resultado.next.mock.callCount(), 0);
@@ -77,6 +81,8 @@ test("Debe rechazar un correo sin arroba", () => {
         email: "correosinArroba.com"
     });
 
+    console.log("Debe permitir datos válidos:", resultado.responseBody);
+
     assert.strictEqual(resultado.statusCode, 400);
     assert.strictEqual(resultado.next.mock.callCount(), 0);
     assert.deepStrictEqual(resultado.responseBody, {
@@ -90,6 +96,8 @@ test("Debe rechazar un correo que no sea texto", () => {
         ...datosValidos,
         email: 123
     });
+
+    console.log("Debe permitir datos válidos:", resultado.responseBody);
 
     assert.strictEqual(resultado.statusCode, 400);
     assert.strictEqual(resultado.next.mock.callCount(), 0);
@@ -105,6 +113,8 @@ test("Debe rechazar una contraseña vacía", () => {
         password: ""
     });
 
+    console.log("Debe permitir datos válidos:", resultado.responseBody);
+
     assert.strictEqual(resultado.statusCode, 400);
     assert.strictEqual(resultado.next.mock.callCount(), 0);
     assert.deepStrictEqual(resultado.responseBody, {
@@ -118,6 +128,8 @@ test("Debe rechazar una contraseña que no cumple el regex", () => {
         ...datosValidos,
         password: "clave123"
     });
+
+    console.log("Debe permitir datos válidos:", resultado.responseBody);
 
     assert.strictEqual(resultado.statusCode, 400);
     assert.strictEqual(resultado.next.mock.callCount(), 0);
@@ -133,6 +145,8 @@ test("Debe rechazar un nombre completo vacío", () => {
         fullName: ""
     });
 
+    console.log("Debe permitir datos válidos:", resultado.responseBody);
+
     assert.strictEqual(resultado.statusCode, 400);
     assert.strictEqual(resultado.next.mock.callCount(), 0);
     assert.deepStrictEqual(resultado.responseBody, {
@@ -146,6 +160,8 @@ test("Debe rechazar un nombre completo demasiado corto", () => {
         ...datosValidos,
         fullName: "Juan"
     });
+
+    console.log("Debe permitir datos válidos:", resultado.responseBody);
 
     assert.strictEqual(resultado.statusCode, 400);
     assert.strictEqual(resultado.next.mock.callCount(), 0);
@@ -161,6 +177,8 @@ test("Debe rechazar un teléfono vacío", () => {
         phone: ""
     });
 
+    console.log("Debe permitir datos válidos:", resultado.responseBody);
+
     assert.strictEqual(resultado.statusCode, 400);
     assert.strictEqual(resultado.next.mock.callCount(), 0);
     assert.deepStrictEqual(resultado.responseBody, {
@@ -175,6 +193,8 @@ test("Debe rechazar un teléfono con letras", () => {
         phone: "300ABC4567"
     });
 
+    console.log("Debe permitir datos válidos:", resultado.responseBody);
+
     assert.strictEqual(resultado.statusCode, 400);
     assert.strictEqual(resultado.next.mock.callCount(), 0);
     assert.deepStrictEqual(resultado.responseBody, {
@@ -186,8 +206,11 @@ test("Debe rechazar un teléfono con letras", () => {
 test("Debe permitir datos válidos", () => {
     const resultado = ejecutarValidacion(datosValidos);
 
+    console.log("Debe permitir datos válidos:", resultado.responseBody);
+
     assert.strictEqual(resultado.statusCode, 0);
     assert.strictEqual(resultado.next.mock.callCount(), 1);
     assert.strictEqual(resultado.responseBody, undefined);
 });
+
 
