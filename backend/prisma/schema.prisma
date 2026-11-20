@@ -12,7 +12,7 @@ datasource db {
 
 enum Role {
   USER
-  CLIENT
+  RENTER
   OWNER
   ADMIN
 }
@@ -23,14 +23,26 @@ enum VerificationStatus {
   REJECTED
 }
 
+enum RenterVerificationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum OwnerVerificationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 enum MotoStatus {
-  PENDING_APPROVAL // Recién subida por un propietario (en revisión por Admin)
-  AVAILABLE        // Aprobada y lista para alquilar
-  RESERVED         // En proceso de reserva
-  RENTED           // Alquilada en curso
-  MAINTENANCE      // En taller
-  INACTIVE         // Desactivada temporalmente
-  REJECTED         // Rechazada por documentos inválidos
+  PENDING_APPROVAL
+  AVAILABLE
+  RESERVED
+  RENTED
+  MAINTENANCE
+  INACTIVE
+  REJECTED
 }
 
 enum RentalStatus {
@@ -52,7 +64,7 @@ enum HandoverType {
 }
 
 // ----------------------------------------------------
-// MODELOS DE USUARIO Y PERFILES
+// USER AND PROFILE MODELS
 // ----------------------------------------------------
 
 model User {
@@ -64,83 +76,99 @@ model User {
   phone     String
   role      Role     @default(USER)
 
-   // Verificación de correo
+  // Email verification
   isEmailVerified          Boolean   @default(false)
   emailVerificationToken   String?
   emailVerificationExpires DateTime?
 
-   // NUEVOS CAMPOS: Recuperación de contraseña
+  // Password recovery
   resetPasswordToken       String?
   resetPasswordExpires     DateTime?
 
-  // Un usuario puede ser Cliente (rentar para manejar), Dueño (publicar motos), o ambos
-  client    Client?
+  // Profiles
   owner     Owner?
+  renter    Renter?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-}
-
-model Client {
-  id       String  @id @default(uuid())
-  userId   String  @unique
-
-  address  String?
-
-  documentNumber        String   @unique
-  documentFrontUrl      String
-  documentBackUrl       String
-
-  licenseNumber         String   @unique
-  licenseCategory       String
-  licenseExpirationDate DateTime
-  licenseFrontUrl       String
-  licenseBackUrl        String
-
-  verificationStatus    VerificationStatus @default(PENDING)
-  verificationNotes     String?
-  verifiedAt            DateTime?
-
-  user     User     @relation(fields: [userId], references: [id])
-  rentals  Rental[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model Owner {
-  id                 String             @id @default(uuid())
-  userId             String             @unique
-
-  // Datos bancarios donde MotoRent le consignará sus ganancias
-  bankName           String             // Ej: Bancolombia, Nequi, Davivienda
-  accountType        String             // Ahorros / Corriente
-  accountNumber      String
-  accountHolderName  String?            // Nombre del titular
-  accountHolderDoc   String?            // Cédula del titular
-
-  // Estado de aprobación del dueño por parte del Admin
-  verificationStatus VerificationStatus @default(PENDING)
-  verificationNotes  String?
-  verifiedAt         DateTime?
-
-  // Relaciones
-  user               User               @relation(fields: [userId], references: [id])
-  motos              Moto[]             // Las motos que este dueño ha publicado
-
-  createdAt          DateTime           @default(now())
-  updatedAt          DateTime           @updatedAt
 }
 
 // ----------------------------------------------------
-// MODELOS DE VEHÍCULOS
+// RENTER
+// ----------------------------------------------------
+
+model Renter {
+  id                 String   @id @default(uuid())
+  idUser             String   @unique
+
+  // Personal identification
+  cedulaNumero       String   @unique
+  cedulaFrontUrl     String
+  cedulaBackUrl      String
+  photo              String
+
+  // Driving license
+  licenseNumber      String   @unique
+  licenseFrontUrl    String
+  licenseBackUrl     String
+  licenseCategory    String
+
+  // Proof of address
+  billUrl            String
+
+  // Verification
+  estadoVerificacion RenterVerificationStatus @default(PENDING)
+  motivoRechazo      String?
+  fechaVerificacion  DateTime?
+
+  // Dates
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  // Relations
+  user               User     @relation(fields: [idUser], references: [id])
+
+  rentals       Rental[]
+}
+
+// ----------------------------------------------------
+// OWNER
+// ----------------------------------------------------
+
+model Owner {
+  id                 String   @id @default(uuid())
+  idUser             String   @unique
+
+  // Personal identification
+  cedulaNumero       String   @unique
+  cedulaFrontUrl     String
+  cedulaBackUrl      String
+  photo              String
+  billUrl            String
+
+  // Verification
+  estadoVerificacion OwnerVerificationStatus @default(PENDING)
+  motivoRechazo      String?
+  fechaVerificacion  DateTime?
+
+  // Dates
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  // Relations
+  user               User     @relation(fields: [idUser], references: [id])
+  motos              Moto[]
+}
+
+// ----------------------------------------------------
+// VEHICLE MODELS
 // ----------------------------------------------------
 
 model Moto {
   id            String      @id @default(uuid())
-  
-  // Si ownerId es null -> Es moto de la empresa MotoRent (Admin)
-  // Si ownerId tiene valor -> Es moto de un particular (Owner)
+
+  // If ownerId is null -> MotoRent company motorcycle
+  // If ownerId has a value -> Private owner's motorcycle
   ownerId       String?
   owner         Owner?      @relation(fields: [ownerId], references: [id])
 
@@ -161,6 +189,10 @@ model Moto {
   updatedAt     DateTime    @updatedAt
 }
 
+// ----------------------------------------------------
+// MOTO DOCUMENT
+// ----------------------------------------------------
+
 model MotoDocument {
   id                   String             @id @default(uuid())
   motoId               String             @unique
@@ -176,25 +208,25 @@ model MotoDocument {
 }
 
 // ----------------------------------------------------
-// MODELOS DE ALQUILER, CONTRATOS Y ENTREGAS
+// RENTAL, CONTRACT AND HANDOVER MODELS
 // ----------------------------------------------------
 
 model Rental {
   id            String       @id @default(uuid())
-  clientId      String
+  renterId      String
   motoId        String
   startDate     DateTime
   endDate       DateTime
 
-  // Desglose de pagos y comisiones:
-  subtotal      Decimal      // Días * Tarifa diaria
-  platformFee   Decimal      @default(0) // Comisión retenida por MotoRent (ej. 15%)
-  ownerEarnings Decimal      @default(0) // Ganancia que se le transfiere al dueño (85%)
-  total         Decimal      // Lo que paga el cliente en total
+  // Payment breakdown and commissions
+  subtotal      Decimal
+  platformFee   Decimal      @default(0)
+  ownerEarnings Decimal      @default(0)
+  total         Decimal
 
   status        RentalStatus @default(PENDING)
 
-  client        Client       @relation(fields: [clientId], references: [id])
+  renter        Renter      @relation(fields: [renterId], references: [id])
   moto          Moto         @relation(fields: [motoId], references: [id])
 
   contract      Contract?
@@ -202,6 +234,7 @@ model Rental {
 
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
+
 }
 
 model Contract {

@@ -62,8 +62,11 @@ function Login() {
       }
 
       // Si todo está bien, guardamos el token y vamos al dashboard
-      localStorage.setItem("token", data.token);
-      localStorage.setItem("user", JSON.stringify(data.user));
+      const token = data.data?.token || data.token;
+      const user = data.data?.user || data.user;
+
+      localStorage.setItem("token", token);
+      localStorage.setItem("user", JSON.stringify(user));
       navigate("/dashboard", { replace: true });
     } catch (error) {
       console.error(error);
