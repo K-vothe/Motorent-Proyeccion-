@@ -42,7 +42,7 @@ export const listarDocumentosLegales = async (motoId: string) =>
 // ===== IMÁGENES ===== //
 export const crearImagenMoto = async (motoId: string, data: { data: Buffer; mime: string; isPrimary: boolean }) =>
   prisma.motoImage.create({
-    data: { motoId, ...data },
+    data: { motoId, ...data, data: new Uint8Array(data.data) },
     select: { id: true, mime: true, isPrimary: true },
   });
 
