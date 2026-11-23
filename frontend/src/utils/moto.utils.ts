@@ -99,11 +99,19 @@ export interface ClasificacionCilindraje {
   licenciaRequerida: "A1 o A2" | "A2";
 }
 
+/** Extrae el número de cilindraje aunque venga con sufijo (ej. "321cc" -> 321). */
+function numeroCilindraje(cc: number | string): number {
+  if (typeof cc === "number") return Number.isFinite(cc) ? cc : 0;
+  const digitos = String(cc).replace(/[^\d.]/g, "");
+  const valor = Number(digitos);
+  return Number.isFinite(valor) ? valor : 0;
+}
+
 /**
  * En Colombia la licencia A1 cubre motos de hasta 125 cc; por encima se requiere A2.
  */
 export function clasificarCilindraje(cc: number | string): ClasificacionCilindraje {
-  const valor = Number(cc) || 0;
+  const valor = numeroCilindraje(cc);
   const licenciaRequerida = valor <= 125 ? "A1 o A2" : "A2";
 
   if (valor <= 160) return { segmento: "Urbana", licenciaRequerida };
@@ -125,7 +133,7 @@ export function describirRecorrido(km: number | undefined | null): string {
 /** Categoría sugerida cuando la base de datos no la trae. */
 export function inferirCategoria(moto: Pick<MotoCatalogo, "category" | "displacement">): string {
   if (moto.category) return moto.category;
-  return Number(moto.displacement) >= 250 ? "Viaje" : "Uso diario";
+  return numeroCilindraje(moto.displacement) >= 250 ? "Viaje" : "Uso diario";
 }
 
 // ============================================================================

@@ -15,6 +15,8 @@
     "db:status": "node scripts/db-local.mjs status",
     "db:sync": "prisma db push && prisma generate",
     "db:seed": "tsx prisma/seed.ts",
+    "test": "tsx --test src/Tests/crypto.util.test.ts src/Tests/moto.service.test.ts src/Tests/renta.service.test.ts src/Tests/validateLoginData.middleware.test.ts src/Tests/validateRegisterData.test.ts test/admin.service.test.ts test/moto-galeria.service.test.ts test/moto.controller.test.ts test/resena.service.test.ts test/role.middleware.test.ts test/verificacion-perfil.service.test.ts",
+    "test:e2e": "tsx scripts/e2e-mvp.ts",
     "postinstall": "prisma skills sync || exit 0"
   },
   "keywords": [],

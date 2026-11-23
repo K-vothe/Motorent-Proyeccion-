@@ -3,7 +3,10 @@ import { prisma } from "../config/prisma.js";
 // ====== MÉTODOS PARA MOTOS ====== //
 
 export const obtenerTodasLasMotos = async () => {
-  return await prisma.moto.findMany();
+  return await prisma.moto.findMany({
+    where: { status: "AVAILABLE" },
+    orderBy: { createdAt: "desc" },
+  });
 };
 
 export const buscarMotoPorPlaca = async (placa: string) => {

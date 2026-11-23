@@ -32,7 +32,15 @@ async function prepararGaleriaMoto(motoId: string, descripcion: string) {
   await mkdir(carpetaMoto, { recursive: true });
 
   // Intentamos reutilizar la imagen de muestra del frontend; si no existe, guardamos PNG válido
-  const fotoOrigen = path.resolve(process.cwd(), "..", "frontend", "src", "assets", "moto1.jpeg");
+  const fotoOrigen = path.resolve(
+    process.cwd(),
+    "..",
+    "frontend",
+    "src",
+    "assets",
+    "imagenes",
+    "moto1.jpeg"
+  );
   const fotoDestino = path.join(carpetaMoto, "foto-seed-01.jpg");
   try {
     await copyFile(fotoOrigen, fotoDestino);
@@ -270,7 +278,7 @@ async function main() {
       model: "MT-03",
       year: 2024,
       licensePlate: "MTR32A",
-      displacement: "321cc",
+      displacement: "321",
       KM: 6400,
       color: "Azul Profundo",
       dailyRate: 135000,
@@ -285,7 +293,7 @@ async function main() {
       model: "CB190R",
       year: 2023,
       licensePlate: "HND19B",
-      displacement: "184cc",
+      displacement: "184",
       KM: 12300,
       color: "Rojo Deportivo",
       dailyRate: 85000,
@@ -300,7 +308,7 @@ async function main() {
       model: "Z650",
       year: 2025,
       licensePlate: "KWK65C",
-      displacement: "649cc",
+      displacement: "649",
       KM: 3100,
       color: "Negro Mate",
       dailyRate: 210000,
@@ -315,7 +323,7 @@ async function main() {
       model: "V-Strom 250 SX",
       year: 2025,
       licensePlate: "SZK25D",
-      displacement: "249cc",
+      displacement: "249",
       KM: 1850,
       color: "Amarillo Aventura",
       dailyRate: 125000,
@@ -330,7 +338,7 @@ async function main() {
       model: "Pulsar NS200 FI",
       year: 2024,
       licensePlate: "BJJ20E",
-      displacement: "199cc",
+      displacement: "199",
       KM: 9100,
       color: "Gris Grafito",
       dailyRate: 92000,
@@ -345,7 +353,7 @@ async function main() {
       model: "F 900 R",
       year: 2024,
       licensePlate: "BMW90F",
-      displacement: "895cc",
+      displacement: "895",
       KM: 4900,
       color: "Plata Hockenheim",
       dailyRate: 290000,
@@ -360,7 +368,7 @@ async function main() {
       model: "NMAX 155 Connected",
       year: 2025,
       licensePlate: "NMX15G",
-      displacement: "155cc",
+      displacement: "155",
       KM: 2700,
       color: "Blanco Perla",
       dailyRate: 78000,
@@ -378,6 +386,7 @@ async function main() {
       update: {
         dailyRate: item.dailyRate,
         KM: item.KM,
+        displacement: item.displacement,
       },
       create: {
         ownerId: item.ownerId,
