@@ -1,6 +1,12 @@
 import "./Home.css";
 import moto1 from "../../assets/imagenes/moto1.jpeg";
 import { Link } from "react-router-dom";
+import {
+  IconCheckCircle,
+  IconClock,
+  IconDocument,
+  IconShieldCheck,
+} from "../../components/Icons";
 
 function Home() {
 
@@ -62,21 +68,21 @@ function Home() {
           </div>
 
           <div className="categories-grid">
-            <Link to="/motos" className="category-card travel">
+            <Link to="/motos?categoria=Viaje" className="category-card travel">
               <div className="category-tag">Aventura</div>
               <h3>Viaje y Turismo</h3>
               <p>Altas cilindradas con maleteros listas para devorar carretera con total comodidad.</p>
               <span className="card-link">Explorar categoría →</span>
             </Link>
 
-            <Link to="/motos" className="category-card daily">
+            <Link to="/motos?categoria=Uso%20diario" className="category-card daily">
               <div className="category-tag">Ciudad</div>
               <h3>Uso Diario</h3>
               <p>Scooters y motos livianas, ideales para esquivar el tráfico diario y ahorrar gasolina.</p>
               <span className="card-link">Explorar categoría →</span>
             </Link>
 
-            <Link to="/motos" className="category-card work">
+            <Link to="/motos?categoria=Trabajo" className="category-card work">
               <div className="category-tag">Productividad</div>
               <h3>Trabajo</h3>
               <p>Motos resistentes, económicas y listas para mensajería o jornadas exigentes.</p>
@@ -98,33 +104,44 @@ function Home() {
 
               <div className="owner-perks">
                 <div className="perk">
-                  <span className="perk-icon">🛡️</span>
+                  <span className="perk-icon" aria-hidden="true">
+                    <IconShieldCheck size={22} />
+                  </span>
                   <div>
                     <h4>Conductores verificados</h4>
-                    <p>Revisamos antecedentes, cédula y licencia de cada cliente.</p>
+                    <p>Validamos cédula, licencia A1/A2 y comprobante de domicilio antes de habilitar reservas.</p>
                   </div>
                 </div>
 
                 <div className="perk">
-                  <span className="perk-icon">💳</span>
+                  <span className="perk-icon" aria-hidden="true">
+                    <IconDocument size={22} />
+                  </span>
                   <div>
-                    <h4>Pagos seguros a tu cuenta</h4>
-                    <p>Recibe tus ganancias directamente en Bancolombia, Nequi o Daviplata.</p>
+                    <h4>Contrato digital SHA-256 y actas PICKUP/RETURN</h4>
+                    <p>Cada renta queda respaldada con cláusulas inmutables y registro fotográfico al entregar y devolver.</p>
                   </div>
                 </div>
 
                 <div className="perk">
-                  <span className="perk-icon">⏱️</span>
+                  <span className="perk-icon" aria-hidden="true">
+                    <IconClock size={22} />
+                  </span>
                   <div>
-                    <h4>Control total de calendario</h4>
-                    <p>Bloquea fechas cuando tú quieras usar tu propia moto.</p>
+                    <h4>Control total y pagos claros</h4>
+                    <p>Recibe el 85% neto de cada renta, define tus tarifas y supervisa reseñas verificadas.</p>
                   </div>
                 </div>
               </div>
 
-              <Link to="/register" className="btn-owner-cta">
-                Publicar mi moto gratis
-              </Link>
+              <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+                <Link to="/register" className="btn-owner-cta">
+                  Publicar mi moto gratis
+                </Link>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, color: "#CBD5E1" }}>
+                  <IconCheckCircle size={15} /> Reputación bidireccional doble ciego
+                </span>
+              </div>
             </div>
           </div>
         </section>

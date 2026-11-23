@@ -840,3 +840,21 @@
     font-size: 22px;
   }
 }
+
+
+/* FASE 11 (H6): Sello discreto de verificación P2P en tarjeta */
+.mc-verified-pill {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background-color: rgba(15, 37, 55, 0.84);
+  color: #f8fafc;
+  font-size: 11px;
+  font-weight: 700;
+  backdrop-filter: blur(4px);
+}

@@ -9,90 +9,10 @@
   flex-direction: column;
 }
 
-/* ========================================================= */
-/* 2. NAVBAR FLOTANTE / STICKY                              */
-/* Se queda fijo arriba al scrollear para fácil navegación   */
-/* ========================================================= */
-.navbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 18px 60px;
-  background-color: #FFFFFF;
-  border-bottom: 1px solid #E5E5E2;
-  position: sticky; /* Fijo en la parte superior */
-  top: 0;
-  z-index: 100;
-}
-
-.logo {
-  font-size: 22px;
-  font-weight: 800;
-  letter-spacing: 0.5px;
-  text-decoration: none;
-  color: #0F2537; /* Azul petróleo */
-}
-
-.logo span {
-  color: #FF6A3D; /* Naranja en la palabra MOTO */
-}
-
-.nav-links {
-  display: flex;
-  gap: 32px;
-}
-
-.nav-links a {
-  color: #2D3748;
-  text-decoration: none;
-  font-size: 15px;
-  font-weight: 500;
-  transition: color 0.2s ease;
-}
-
-.nav-links a:hover {
-  color: #FF6A3D; /* Al pasar el ratón se pone naranja */
-}
-
-.nav-buttons {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.btn-login {
-  color: #0F2537;
-  text-decoration: none;
-  font-size: 14px;
-  font-weight: 600;
-  padding: 8px 16px;
-  border-radius: 8px;
-  transition: background-color 0.2s;
-}
-
-.btn-login:hover {
-  background-color: #F0F4F8;
-}
-
-.btn-register, .btn-dashboard {
-  background-color: #FF6A3D;
-  color: #FFFFFF;
-  text-decoration: none;
-  font-size: 14px;
-  font-weight: 600;
-  padding: 10px 20px;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(255, 106, 61, 0.25);
-  transition: all 0.2s ease;
-}
-
-.btn-register:hover, .btn-dashboard:hover {
-  background-color: #E5541F; /* Naranja más oscuro al hover */
-  transform: translateY(-1px); /* Efecto de elevación suave */
-}
+/* Nota H7 (Fase 11): estilos legados de .navbar eliminados (ahora se usa global-navbar) */
 
 /* ========================================================= */
-/* 3. HERO (PORTADA PRINCIPAL)                               */
+/* 2. HERO (PORTADA PRINCIPAL)                               */
 /* Distribución en 2 columnas: texto a la izq, foto a la der */
 /* ========================================================= */
 .hero {
@@ -389,7 +309,15 @@
 }
 
 .perk-icon {
-  font-size: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  background-color: rgba(255, 106, 61, 0.16);
+  color: #FF8159;
 }
 
 .perk h4 {

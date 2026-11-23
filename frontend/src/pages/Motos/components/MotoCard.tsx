@@ -44,6 +44,10 @@ function MotoCard({ moto, fotoPortada, fotoRespaldo, onVerDetalle }: MotoCardPro
           }}
         />
         <span className="mc-category">{categoria}</span>
+        <span className="mc-verified-pill" title="Motocicleta verificada con inspección PICKUP/RETURN">
+          <IconShieldCheck size={12} />
+          <span>Verificada</span>
+        </span>
       </button>
 
       <div className="mc-body">

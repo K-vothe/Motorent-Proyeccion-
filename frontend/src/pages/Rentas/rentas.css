@@ -72,57 +72,7 @@
   color: #0F2537;
 }
 
-.rentas-navbar {
-  display: flex;
-  align-items: center;
-  gap: 24px;
-  padding: 16px 60px;
-  background-color: #FFFFFF;
-  border-bottom: 1px solid #E5E5E2;
-}
-
-.logo {
-  font-size: 20px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  white-space: nowrap;
-}
-
-.logo span {
-  color: #FF6A3D;
-}
-
-.rentas-nav-links {
-  display: flex;
-  gap: 24px;
-  margin-left: auto;
-}
-
-.rentas-nav-links a {
-  color: #1A1A1A;
-  text-decoration: none;
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.rentas-nav-links a:hover {
-  color: #FF6A3D;
-}
-
-.logout-button {
-  background-color: transparent;
-  border: 1px solid #E5E5E2;
-  border-radius: 8px;
-  padding: 8px 16px;
-  font-size: 13px;
-  cursor: pointer;
-  color: #1A1A1A;
-}
-
-.logout-button:hover {
-  border-color: #FF6A3D;
-  color: #FF6A3D;
-}
+/* Nota H7 (Fase 11): estilos legados de .rentas-navbar eliminados (ahora se usa global-navbar) */
 
 .rentas-content {
   padding: 48px 60px 80px;

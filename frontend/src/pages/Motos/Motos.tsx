@@ -1,7 +1,9 @@
 // frontend/src/pages/Motos/Motos.tsx
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import motoDefaultImg from "../../assets/imagenes/moto1.jpeg";
 import { IconAlert, IconClose, IconSearch, IconSliders } from "../../components/Icons";
+import { EmptyState, SkeletonMotoGrid } from "../../components/UiFeedback";
 import { leerUsuarioLocal } from "../../services/dashboard.service";
 import { API_URL, obtenerCatalogoMotos } from "../../services/motos.service";
 import { obtenerEstadoVerificacionLocal } from "../../services/verificacion.service";
@@ -83,13 +85,19 @@ function obtenerFotoLocalPorPlaca(placa?: string): string | null {
 }
 
 function Motos() {
+  const [searchParams] = useSearchParams();
+  const categoriaInicial = (() => {
+    const raw = searchParams.get("categoria");
+    return raw === "Viaje" || raw === "Uso diario" || raw === "Trabajo" ? raw : "Todas";
+  })();
+
   const [motos, setMotos] = useState<MotoCatalogo[]>([]);
   const [cargando, setCargando] = useState(true);
 
   // Filtros (panel de precisión oculto por defecto hasta que el usuario lo despliegue)
   const [filtrosAbiertos, setFiltrosAbiertos] = useState(false);
   const [busqueda, setBusqueda] = useState("");
-  const [categoria, setCategoria] = useState("Todas");
+  const [categoria, setCategoria] = useState(categoriaInicial);
   const [rangoCc, setRangoCc] = useState<RangoCilindraje>("TODOS");
   const [ccTexto, setCcTexto] = useState("");
   const [orden, setOrden] = useState<OrdenCatalogo>("RELEVANCIA");
@@ -445,17 +453,9 @@ function Motos() {
             </div>
           )}
 
-        {/* GRID DE TARJETAS COMPACTAS */}
+        {/* GRID DE TARJETAS COMPACTAS + SKELETON SHIMMER (FASE 11 · H3) */}
         {cargando ? (
-          <p
-            style={{
-              textAlign: "center",
-              padding: "40px",
-              color: "var(--text-muted)",
-            }}
-          >
-            Consultando motocicletas disponibles...
-          </p>
+          <SkeletonMotoGrid cantidad={6} />
         ) : (
           <div className="motos-grid">
             {paginacion.itemsPagina.map((moto) => {
@@ -478,18 +478,12 @@ function Motos() {
         )}
 
         {!cargando && paginacion.totalItems === 0 && (
-          <div className="no-results-box">
-            <p className="no-results">
-              No se encontraron motos con esa combinación de filtros.
-            </p>
-            <button
-              type="button"
-              className="reset-filter-btn"
-              onClick={limpiarTodosLosFiltros}
-            >
-              Ver todas las motos
-            </button>
-          </div>
+          <EmptyState
+            titulo="Sin coincidencias con estos filtros"
+            descripcion="No encontramos motocicletas que cumplan con todos los criterios seleccionados. Restablece los filtros para explorar el catálogo completo."
+            accionTexto="Ver todas las motos"
+            onAccion={limpiarTodosLosFiltros}
+          />
         )}
 
         {/* PAGINACIÓN NUMERADA (24–30 MOTOS POR PÁGINA) */}

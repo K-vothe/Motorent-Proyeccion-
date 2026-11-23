@@ -27,7 +27,9 @@ import {
 } from "../utils/preferencias.storage";
 import {
   IconBell,
+  IconClose,
   IconLogout,
+  IconMenu,
   IconMoon,
   IconPlus,
   IconSettings,
@@ -90,6 +92,7 @@ function Navbar() {
 
   const [menuNotificaciones, setMenuNotificaciones] = useState(false);
   const [menuPerfil, setMenuPerfil] = useState(false);
+  const [menuMovil, setMenuMovil] = useState(false);
   const [temaEfectivo, setTemaEfectivo] = useState<TemaEfectivo>(() =>
     resolverTemaEfectivo(leerPreferencias().tema, detectarTemaOscuroSistema())
   );
@@ -152,6 +155,7 @@ function Navbar() {
       if (event.key === "Escape") {
         setMenuNotificaciones(false);
         setMenuPerfil(false);
+        setMenuMovil(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -426,7 +430,68 @@ function Navbar() {
             </Link>
           </div>
         )}
+
+        {/* BOTÓN HAMBURGUESA ACCESIBLE PARA MÓVILES (FASE 11 · H1) */}
+        <button
+          type="button"
+          className="mobile-menu-toggle"
+          aria-label={menuMovil ? "Cerrar menú de navegación" : "Abrir menú de navegación"}
+          aria-expanded={menuMovil}
+          aria-controls="nav-mobile-drawer"
+          onClick={() => {
+            setMenuMovil((prev) => !prev);
+            setMenuPerfil(false);
+            setMenuNotificaciones(false);
+          }}
+        >
+          {menuMovil ? <IconClose size={20} /> : <IconMenu size={20} />}
+        </button>
       </div>
+
+      {/* CAJÓN MÓVIL RESPONSIVE (<= 768px) */}
+      {menuMovil && (
+        <nav
+          id="nav-mobile-drawer"
+          className="mobile-nav-drawer"
+          aria-label="Navegación móvil"
+        >
+          {navConfig.enlacesPrincipales.map((enlace) => (
+            <Link
+              key={enlace.to}
+              to={enlace.to}
+              className={[
+                "mobile-nav-link",
+                enlace.destacado ? "mobile-nav-link--accent" : "",
+                location.pathname === enlace.to ? "active" : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
+              onClick={() => setMenuMovil(false)}
+            >
+              {enlace.destacado && <IconPlus size={15} />}
+              <span>{enlace.label}</span>
+            </Link>
+          ))}
+          {!haySesion && (
+            <div className="mobile-guest-actions">
+              <Link
+                to="/login"
+                className="mobile-nav-link"
+                onClick={() => setMenuMovil(false)}
+              >
+                Iniciar sesión
+              </Link>
+              <Link
+                to="/register"
+                className="mobile-nav-link mobile-nav-link--accent"
+                onClick={() => setMenuMovil(false)}
+              >
+                Registrarse
+              </Link>
+            </div>
+          )}
+        </nav>
+      )}
     </header>
   );
 }
