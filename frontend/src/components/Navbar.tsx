@@ -7,16 +7,18 @@ import {
   EVENTO_CAMBIO_ROL,
   guardarModoActivo,
   leerModoActivo,
-  leerPreviewDev,
   limpiarEstadoRolTemporal,
-  type SimuladorRolDev,
 } from "../utils/rolActivo.storage";
 import {
   obtenerNavegacionPorRol,
   obtenerResumenRoles,
   type ModoDashboard,
-  type ResumenRolesUsuario,
 } from "../utils/roles.utils";
+import {
+  construirMensajeConfirmacionCambioPerfil,
+  type ConfirmacionCambioPerfil,
+} from "../utils/transicion.utils";
+import { useAppTransition } from "./SessionTransitionOverlay";
 import {
   EVENTO_PREFERENCIAS,
   detectarTemaOscuroSistema,
@@ -39,41 +41,6 @@ import {
   IconUser,
 } from "./Icons";
 
-/** Construye el mismo resumen de vista previa que usa el Dashboard en modo DEV. */
-function resolverResumenConPreview(
-  resumenReal: ResumenRolesUsuario,
-  preview: SimuladorRolDev
-): ResumenRolesUsuario {
-  if (!import.meta.env.DEV || preview === "REAL") {
-    return resumenReal;
-  }
-  if (preview === "ADMIN") return obtenerResumenRoles({ role: "ADMIN" });
-  if (preview === "DUAL") {
-    return obtenerResumenRoles({
-      role: "USER",
-      renter: { estadoVerificacion: "APPROVED" },
-      owner: { estadoVerificacion: "APPROVED" },
-    });
-  }
-  if (preview === "OWNER") {
-    return obtenerResumenRoles({
-      role: "OWNER",
-      owner: { estadoVerificacion: "APPROVED" },
-    });
-  }
-  if (preview === "RENTER") {
-    return obtenerResumenRoles({
-      role: "RENTER",
-      renter: { estadoVerificacion: "APPROVED" },
-    });
-  }
-  return obtenerResumenRoles(
-    { role: "USER" },
-    obtenerEstadoVerificacionLocal("renter"),
-    obtenerEstadoVerificacionLocal("owner")
-  );
-}
-
 /** Asocia un ícono vectorial limpio a cada ruta del menú de perfil. */
 function renderIconoMenu(ruta: string) {
   if (ruta === "/configuracion") return <IconSettings size={16} />;
@@ -86,6 +53,7 @@ function renderIconoMenu(ruta: string) {
 function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { ejecutarTransicion } = useAppTransition();
 
   // Contador ligero para refrescar la Navbar al cambiar de sesión o rol
   const [, setVersionRol] = useState(0);
@@ -93,6 +61,8 @@ function Navbar() {
   const [menuNotificaciones, setMenuNotificaciones] = useState(false);
   const [menuPerfil, setMenuPerfil] = useState(false);
   const [menuMovil, setMenuMovil] = useState(false);
+  const [confirmacionCambio, setConfirmacionCambio] =
+    useState<ConfirmacionCambioPerfil | null>(null);
   const [temaEfectivo, setTemaEfectivo] = useState<TemaEfectivo>(() =>
     resolverTemaEfectivo(leerPreferencias().tema, detectarTemaOscuroSistema())
   );
@@ -156,6 +126,7 @@ function Navbar() {
         setMenuNotificaciones(false);
         setMenuPerfil(false);
         setMenuMovil(false);
+        setConfirmacionCambio(null);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -187,16 +158,12 @@ function Navbar() {
     ? usuarioActual.fullName.charAt(0).toUpperCase()
     : "U";
 
-  const resumenReal = haySesion
+  const resumenActivo = haySesion
     ? obtenerResumenRoles(
         usuarioActual,
         obtenerEstadoVerificacionLocal("renter"),
         obtenerEstadoVerificacionLocal("owner")
       )
-    : null;
-
-  const resumenActivo = resumenReal
-    ? resolverResumenConPreview(resumenReal, leerPreviewDev())
     : null;
 
   const modoGuardado = leerModoActivo();
@@ -214,23 +181,47 @@ function Navbar() {
   );
 
   function handleLogout() {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    localStorage.removeItem("motorent_verificacion_renter");
-    localStorage.removeItem("motorent_verificacion_owner");
-    limpiarEstadoRolTemporal();
     setMenuPerfil(false);
-    navigate("/login", { replace: true });
+    setMenuMovil(false);
+    const nombreSalida = usuarioActual?.fullName ?? null;
+    ejecutarTransicion(
+      { tipo: "logout", nombreUsuario: nombreSalida },
+      () => {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        localStorage.removeItem("motorent_verificacion_renter");
+        localStorage.removeItem("motorent_verificacion_owner");
+        limpiarEstadoRolTemporal();
+        navigate("/login", { replace: true });
+      }
+    );
   }
 
-  function alternarModoDual() {
-    const nuevoModo: ModoDashboard =
-      modoActual === "OWNER" ? "RENTER" : "OWNER";
-    guardarModoActivo(nuevoModo);
+  /** Paso 1: abre el diálogo de confirmación antes de cambiar entre perfiles duales. */
+  function solicitarCambioModoDual() {
+    const origen: "RENTER" | "OWNER" = modoActual === "OWNER" ? "OWNER" : "RENTER";
     setMenuPerfil(false);
-    if (location.pathname !== "/dashboard") {
-      navigate("/dashboard");
-    }
+    setConfirmacionCambio(construirMensajeConfirmacionCambioPerfil(origen));
+  }
+
+  /** Paso 2: confirma y ejecuta la transición animada hacia el perfil contrario. */
+  function confirmarCambioModoDual() {
+    if (!confirmacionCambio) return;
+    const { modoDestino } = confirmacionCambio;
+    setConfirmacionCambio(null);
+
+    ejecutarTransicion(
+      {
+        tipo: modoDestino === "OWNER" ? "switch-to-owner" : "switch-to-renter",
+        nombreUsuario: usuarioActual?.fullName ?? null,
+      },
+      () => {
+        guardarModoActivo(modoDestino);
+        if (location.pathname !== "/dashboard") {
+          navigate("/dashboard");
+        }
+      }
+    );
   }
 
   function marcarLeidas() {
@@ -394,7 +385,7 @@ function Navbar() {
                       <button
                         type="button"
                         className="dropdown-link dropdown-link--switch"
-                        onClick={alternarModoDual}
+                        onClick={solicitarCambioModoDual}
                       >
                         <IconSwitch size={16} />
                         <span>
@@ -491,6 +482,53 @@ function Navbar() {
             </div>
           )}
         </nav>
+      )}
+
+      {/* DIÁLOGO DE CONFIRMACIÓN PREVIO AL CAMBIO DE PERFIL DUAL (FASE 13) */}
+      {confirmacionCambio && (
+        <div
+          className="switch-confirm-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="switch-confirm-title"
+          onClick={() => setConfirmacionCambio(null)}
+        >
+          <div
+            className="switch-confirm-dialog"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="switch-confirm-icon" aria-hidden="true">
+              <IconSwitch size={22} />
+            </div>
+            <h3 id="switch-confirm-title">{confirmacionCambio.titulo}</h3>
+            <p className="switch-confirm-text">{confirmacionCambio.descripcion}</p>
+            <div className="switch-confirm-pills">
+              <span className="switch-pill switch-pill--from">
+                Actual: {confirmacionCambio.etiquetaOrigen}
+              </span>
+              <span className="switch-pill-arrow" aria-hidden="true">→</span>
+              <span className="switch-pill switch-pill--to">
+                Nuevo: {confirmacionCambio.etiquetaDestino}
+              </span>
+            </div>
+            <div className="switch-confirm-actions">
+              <button
+                type="button"
+                className="switch-btn switch-btn--cancel"
+                onClick={() => setConfirmacionCambio(null)}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="switch-btn switch-btn--confirm"
+                onClick={confirmarCambioModoDual}
+              >
+                {confirmacionCambio.textoConfirmar}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </header>
   );

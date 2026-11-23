@@ -169,6 +169,21 @@ async function main() {
     },
   });
 
+  // Cuenta DUAL real (Arrendatario + Propietario aprobados para probar cambio de perfil)
+  const diegoDual = await prisma.user.upsert({
+    where: { email: "diego.dual@motorent.co" },
+    update: { isEmailVerified: true },
+    create: {
+      username: "diego_dual",
+      email: "diego.dual@motorent.co",
+      password: passwordHash,
+      fullName: "Diego Alejandro Mora",
+      phone: "3186677889",
+      role: "USER",
+      isEmailVerified: true,
+    },
+  });
+
   // --------------------------------------------------------------------------
   // 2. PERFILES OWNER Y RENTER + DOCUMENTOS DE MUESTRA PARA VISOR ADMIN
   // --------------------------------------------------------------------------
@@ -265,6 +280,53 @@ async function main() {
       licenseCategory: "A2",
       ...docsSofia,
       estadoVerificacion: "PENDING",
+    },
+  });
+
+  // Perfiles APPROVED duales para Diego (Renter + Owner)
+  const docsDiegoRenter = {
+    cedulaFrontUrl: `/uploads/verificaciones/renter/${diegoDual.id}/cedulaFront.png`,
+    cedulaBackUrl: `/uploads/verificaciones/renter/${diegoDual.id}/cedulaBack.png`,
+    photo: `/uploads/verificaciones/renter/${diegoDual.id}/photo.png`,
+    licenseFrontUrl: `/uploads/verificaciones/renter/${diegoDual.id}/licenseFront.png`,
+    licenseBackUrl: `/uploads/verificaciones/renter/${diegoDual.id}/licenseBack.png`,
+    billUrl: `/uploads/verificaciones/renter/${diegoDual.id}/bill.png`,
+  };
+  for (const url of Object.values(docsDiegoRenter)) {
+    await crearArchivoDemo(url.replace(/^\//, ""), pngBuffer);
+  }
+  await prisma.renter.upsert({
+    where: { idUser: diegoDual.id },
+    update: { estadoVerificacion: "APPROVED" },
+    create: {
+      idUser: diegoDual.id,
+      cedulaNumero: "1077665544",
+      licenseNumber: "1077665544",
+      licenseCategory: "A2",
+      ...docsDiegoRenter,
+      estadoVerificacion: "APPROVED",
+      fechaVerificacion: new Date("2026-10-14T11:00:00Z"),
+    },
+  });
+
+  const docsDiegoOwner = {
+    cedulaFrontUrl: `/uploads/verificaciones/owner/${diegoDual.id}/cedulaFront.png`,
+    cedulaBackUrl: `/uploads/verificaciones/owner/${diegoDual.id}/cedulaBack.png`,
+    photo: `/uploads/verificaciones/owner/${diegoDual.id}/photo.png`,
+    billUrl: `/uploads/verificaciones/owner/${diegoDual.id}/bill.png`,
+  };
+  for (const url of Object.values(docsDiegoOwner)) {
+    await crearArchivoDemo(url.replace(/^\//, ""), pngBuffer);
+  }
+  const perfilOwnerDiego = await prisma.owner.upsert({
+    where: { idUser: diegoDual.id },
+    update: { estadoVerificacion: "APPROVED" },
+    create: {
+      idUser: diegoDual.id,
+      cedulaNumero: "1077665544",
+      ...docsDiegoOwner,
+      estadoVerificacion: "APPROVED",
+      fechaVerificacion: new Date("2026-10-14T11:05:00Z"),
     },
   });
 
@@ -377,6 +439,21 @@ async function main() {
       descripcion:
         "Scooter automática muy cómoda para ciudad, amplio espacio bajo el asiento para casco integral y frenos ABS en ambas ruedas.",
     },
+    {
+      ownerId: perfilOwnerDiego.id,
+      brand: "KTM",
+      model: "390 Duke",
+      year: 2025,
+      licensePlate: "KTM39H",
+      displacement: "373",
+      KM: 2150,
+      color: "Naranja Racing",
+      dailyRate: 165000,
+      status: "AVAILABLE" as const,
+      transitLicenseNumber: "LT-KTM39H-2025",
+      descripcion:
+        "Naked deportiva liviana con pantalla TFT, quickshifter y frenos ABS en curva. Ideal para rutas de fin de semana.",
+    },
   ];
 
   const motosCreadas = [];
@@ -387,6 +464,7 @@ async function main() {
         dailyRate: item.dailyRate,
         KM: item.KM,
         displacement: item.displacement,
+        status: item.status,
       },
       create: {
         ownerId: item.ownerId,
@@ -696,6 +774,7 @@ async function main() {
   console.log(`  - Owner 1:    ${ownerCarlos.email} / ${PASSWORD_DEMO}`);
   console.log(`  - Owner 2:    ${ownerLaura.email} / ${PASSWORD_DEMO}`);
   console.log(`  - Renter:     ${renterMateo.email} / ${PASSWORD_DEMO}`);
+  console.log(`  - Dual:       ${diegoDual.email} / ${PASSWORD_DEMO}`);
   console.log(`  - Pendiente:  ${sofiaPendiente.email} / ${PASSWORD_DEMO}`);
   console.log(`  - Motos:      ${motosCreadas.length} (6 disponibles, 1 pendiente de aprobación)`);
 }

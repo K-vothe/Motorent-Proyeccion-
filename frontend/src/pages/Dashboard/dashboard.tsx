@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { IconAlert, IconKey, IconMoto } from "../../components/Icons";
+import { IconAlert } from "../../components/Icons";
 import {
   cargarDatosDashboard,
   ESTADISTICAS_INICIALES,
@@ -11,18 +11,13 @@ import {
 import { obtenerEstadoVerificacionLocal } from "../../services/verificacion.service";
 import {
   EVENTO_CAMBIO_ROL,
-  guardarModoActivo,
-  guardarPreviewDev,
   leerModoActivo,
-  leerPreviewDev,
   limpiarEstadoRolTemporal,
   notificarCambioRol,
-  type SimuladorRolDev,
 } from "../../utils/rolActivo.storage";
 import {
   obtenerResumenRoles,
   type ModoDashboard,
-  type ResumenRolesUsuario,
   type UsuarioSesion,
 } from "../../utils/roles.utils";
 import DashboardAdminView from "./components/DashboardAdminView";
@@ -30,42 +25,6 @@ import DashboardOwnerView from "./components/DashboardOwnerView";
 import DashboardRenterView from "./components/DashboardRenterView";
 import DashboardUserView from "./components/DashboardUserView";
 import "./dashboard.css";
-
-/**
- * Construye un perfil simulado únicamente para la barra de pruebas en desarrollo
- * (import.meta.env.DEV). No existe ni se renderiza en compilaciones de producción.
- */
-function construirResumenSimulado(
-  simulacion: Exclude<SimuladorRolDev, "REAL">
-): ResumenRolesUsuario {
-  if (simulacion === "ADMIN") {
-    return obtenerResumenRoles({ role: "ADMIN" });
-  }
-  if (simulacion === "DUAL") {
-    return obtenerResumenRoles({
-      role: "USER",
-      renter: { estadoVerificacion: "APPROVED" },
-      owner: { estadoVerificacion: "APPROVED" },
-    });
-  }
-  if (simulacion === "OWNER") {
-    return obtenerResumenRoles({
-      role: "OWNER",
-      owner: { estadoVerificacion: "APPROVED" },
-    });
-  }
-  if (simulacion === "RENTER") {
-    return obtenerResumenRoles({
-      role: "RENTER",
-      renter: { estadoVerificacion: "APPROVED" },
-    });
-  }
-  return obtenerResumenRoles(
-    { role: "USER" },
-    obtenerEstadoVerificacionLocal("renter"),
-    obtenerEstadoVerificacionLocal("owner")
-  );
-}
 
 function Dashboard() {
   const navigate = useNavigate();
@@ -80,14 +39,9 @@ function Dashboard() {
   const [cargando, setCargando] = useState(true);
   const [advertenciaApi, setAdvertenciaApi] = useState<string | null>(null);
 
-  // Modo seleccionado cuando el usuario tiene perfil dual (sincronizado con Navbar)
+  // Modo seleccionado cuando el usuario tiene perfil dual (controlado exclusivamente desde el menú del perfil en Navbar)
   const [modoManual, setModoManual] = useState<ModoDashboard | null>(() =>
     leerModoActivo()
-  );
-
-  // Selector temporal exclusivo de desarrollo (npm run dev) sincronizado con Navbar
-  const [rolPreviewDev, setRolPreviewDev] = useState<SimuladorRolDev>(() =>
-    leerPreviewDev()
   );
 
   useEffect(() => {
@@ -122,11 +76,10 @@ function Dashboard() {
     };
   }, [navigate]);
 
-  // Si el usuario alterna el modo dual desde la Navbar, reflejamos el cambio aquí
+  // Reflejamos el cambio de perfil cuando el usuario dual alterna desde el menú desplegable del avatar
   useEffect(() => {
     function sincronizarDesdeNavbar() {
       setModoManual(leerModoActivo());
-      setRolPreviewDev(leerPreviewDev());
     }
 
     window.addEventListener(EVENTO_CAMBIO_ROL, sincronizarDesdeNavbar);
@@ -135,17 +88,11 @@ function Dashboard() {
     };
   }, []);
 
-  // Calculamos el resumen real de roles combinando backend + estados locales de Fase 1
-  const resumenReal = obtenerResumenRoles(
+  const resumenActivo = obtenerResumenRoles(
     usuario,
     obtenerEstadoVerificacionLocal("renter"),
     obtenerEstadoVerificacionLocal("owner")
   );
-
-  const resumenActivo =
-    import.meta.env.DEV && rolPreviewDev !== "REAL"
-      ? construirResumenSimulado(rolPreviewDev)
-      : resumenReal;
 
   const modoActual: ModoDashboard =
     resumenActivo.esUsuarioDual &&
@@ -154,18 +101,6 @@ function Dashboard() {
       : resumenActivo.modoInicial;
 
   const nombre = usuario?.fullName ? usuario.fullName.split(" ")[0] : "";
-
-  function seleccionarModoDual(nuevoModo: "RENTER" | "OWNER") {
-    setModoManual(nuevoModo);
-    guardarModoActivo(nuevoModo);
-  }
-
-  function seleccionarPreviewDev(opcion: SimuladorRolDev) {
-    setRolPreviewDev(opcion);
-    setModoManual(null);
-    guardarModoActivo(null);
-    guardarPreviewDev(opcion);
-  }
 
   if (cargando) {
     return (
@@ -180,41 +115,17 @@ function Dashboard() {
   return (
     <div className="dashboard">
       <main className="dashboard-content">
-        {/* BARRA DE PRUEBA DE ROLES (VISIBLE SOLO EN MODO DESARROLLO) */}
-        {import.meta.env.DEV && (
-          <div
-            className="dev-role-bar"
-            aria-label="Vista previa de roles en desarrollo"
-          >
-            <span className="dev-role-label">
-              Vista previa de roles (solo desarrollo — actualiza panel y barra superior):
-            </span>
-            <div className="dev-role-buttons">
-              {(
-                ["REAL", "USER", "RENTER", "OWNER", "DUAL", "ADMIN"] as SimuladorRolDev[]
-              ).map((opcion) => (
-                <button
-                  key={opcion}
-                  type="button"
-                  className={`dev-role-btn ${
-                    rolPreviewDev === opcion ? "active" : ""
-                  }`}
-                  onClick={() => seleccionarPreviewDev(opcion)}
-                >
-                  {opcion === "REAL" ? "Mi rol real" : opcion}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* BANNER DE BIENVENIDA + INSIGNIA DE ROL + SWITCH DUAL */}
+        {/* BANNER DE BIENVENIDA + INSIGNIA DE ROL ACTIVO */}
         <section className="welcome-banner welcome-banner--flex">
           <div>
             <div className="welcome-badges">
               <span className="welcome-tag">PANEL DE CONTROL</span>
               <span className="role-header-badge">
-                {resumenActivo.etiquetaRol}
+                {resumenActivo.esUsuarioDual
+                  ? modoActual === "OWNER"
+                    ? "Perfil Dual · Modo Propietario"
+                    : "Perfil Dual · Modo Arrendatario"
+                  : resumenActivo.etiquetaRol}
               </span>
             </div>
 
@@ -226,45 +137,13 @@ function Dashboard() {
               {modoActual === "RENTER" &&
                 "Consulta tu renta activa, tu historial de viajes y el catálogo disponible."}
               {modoActual === "OWNER" &&
-                "Supervisa tus motocicletas publicadas y tus ingresos netos del mes."}
+                "Supervisa tus motocicletas publicadas, entregas y ganancias netas."}
               {modoActual === "ADMIN" &&
                 "Supervisión de cuentas, documentos de verificación y catálogo general."}
+              {resumenActivo.esUsuarioDual &&
+                " Puedes alternar entre tus perfiles desde el menú de tu avatar en la barra superior."}
             </p>
           </div>
-
-          {/* SELECTOR DE MODO PARA USUARIOS CON AMBOS PERFILES */}
-          {resumenActivo.esUsuarioDual && (
-            <div
-              className="dual-role-switch"
-              role="tablist"
-              aria-label="Cambiar modo del panel"
-            >
-              <button
-                type="button"
-                role="tab"
-                aria-selected={modoActual === "RENTER"}
-                className={`dual-switch-btn ${
-                  modoActual === "RENTER" ? "active" : ""
-                }`}
-                onClick={() => seleccionarModoDual("RENTER")}
-              >
-                <IconMoto size={16} />
-                <span>Modo Arrendatario</span>
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={modoActual === "OWNER"}
-                className={`dual-switch-btn ${
-                  modoActual === "OWNER" ? "active" : ""
-                }`}
-                onClick={() => seleccionarModoDual("OWNER")}
-              >
-                <IconKey size={16} />
-                <span>Modo Propietario</span>
-              </button>
-            </div>
-          )}
         </section>
 
         {/* ADVERTENCIA SUAVE SI FALLÓ LA CONEXIÓN PARCIAL CON EL BACKEND */}

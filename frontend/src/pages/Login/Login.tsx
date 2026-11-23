@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import logo from "../../assets/logo/logo.png";
 import { IconEye, IconEyeOff } from "../../components/Icons";
+import { useAppTransition } from "../../components/SessionTransitionOverlay";
 import { limpiarEstadoRolTemporal } from "../../utils/rolActivo.storage";
 import "./Login.css";
 
@@ -13,6 +14,7 @@ interface LoginLocationState {
 function Login() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { ejecutarTransicion } = useAppTransition();
   const estadoNavegacion = (location.state as LoginLocationState | null) || null;
 
   // Estados de los campos (si viene recién registrado, precargamos el correo)
@@ -79,14 +81,22 @@ function Login() {
         return;
       }
 
-      // Si todo está bien, guardamos el token y vamos al dashboard
+      // Si todo está bien, guardamos el token y ejecutamos la transición suave de bienvenida
       const token = data.data?.token || data.token;
       const user = data.data?.user || data.user;
 
-      localStorage.setItem("token", token);
-      localStorage.setItem("user", JSON.stringify(user));
-      limpiarEstadoRolTemporal();
-      navigate("/dashboard", { replace: true });
+      ejecutarTransicion(
+        {
+          tipo: "login",
+          nombreUsuario: user?.fullName,
+        },
+        () => {
+          localStorage.setItem("token", token);
+          localStorage.setItem("user", JSON.stringify(user));
+          limpiarEstadoRolTemporal();
+          navigate("/dashboard", { replace: true });
+        }
+      );
     } catch (error) {
       console.error(error);
       setApiError("No se pudo conectar con el servidor backend.");

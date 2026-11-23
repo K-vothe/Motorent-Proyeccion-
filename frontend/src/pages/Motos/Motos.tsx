@@ -20,7 +20,6 @@ import {
   leerPreferencias,
   type TamanoPaginaCatalogo,
 } from "../../utils/preferencias.storage";
-import { leerPreviewDev } from "../../utils/rolActivo.storage";
 import { obtenerResumenRoles } from "../../utils/roles.utils";
 import MotoCard from "./components/MotoCard";
 import MotoDetalleModal from "./components/MotoDetalleModal";
@@ -113,31 +112,12 @@ function Motos() {
   const token = localStorage.getItem("token");
   const haySesion = Boolean(token && token !== "undefined" && token !== "null");
 
-  const previewDev = import.meta.env.DEV ? leerPreviewDev() : "REAL";
   const resumenUsuario = haySesion
-    ? previewDev === "RENTER" || previewDev === "DUAL"
-      ? obtenerResumenRoles({
-          role: "RENTER",
-          renter: { estadoVerificacion: "APPROVED" },
-        })
-      : previewDev === "ADMIN"
-      ? obtenerResumenRoles({ role: "ADMIN" })
-      : previewDev === "OWNER"
-      ? obtenerResumenRoles({
-          role: "OWNER",
-          owner: { estadoVerificacion: "APPROVED" },
-        })
-      : previewDev === "USER"
-      ? obtenerResumenRoles(
-          { role: "USER" },
-          obtenerEstadoVerificacionLocal("renter"),
-          obtenerEstadoVerificacionLocal("owner")
-        )
-      : obtenerResumenRoles(
-          leerUsuarioLocal(),
-          obtenerEstadoVerificacionLocal("renter"),
-          obtenerEstadoVerificacionLocal("owner")
-        )
+    ? obtenerResumenRoles(
+        leerUsuarioLocal(),
+        obtenerEstadoVerificacionLocal("renter"),
+        obtenerEstadoVerificacionLocal("owner")
+      )
     : null;
 
   const puedeSolicitarRenta = Boolean(

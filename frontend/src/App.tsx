@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 import Navbar from "./components/Navbar";
+import { TransitionProvider } from "./components/SessionTransitionOverlay";
 import { ToastProvider } from "./components/UiFeedback";
 
 
@@ -26,15 +27,16 @@ import VerificarOwner from "./pages/Owner/VerificarOwner";
 function App() {
   return (
     <ToastProvider>
-      <BrowserRouter>
-        <a href="#contenido-principal" className="skip-link">
-          Saltar al contenido principal
-        </a>
+      <TransitionProvider>
+        <BrowserRouter>
+          <a href="#contenido-principal" className="skip-link">
+            Saltar al contenido principal
+          </a>
 
-        <Navbar />
+          <Navbar />
 
-        <div id="contenido-principal" tabIndex={-1}>
-          <Routes>
+          <div id="contenido-principal" tabIndex={-1}>
+            <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
@@ -77,9 +79,10 @@ function App() {
           </Route>
         </Route>
 
-          </Routes>
-        </div>
-      </BrowserRouter>
+            </Routes>
+          </div>
+        </BrowserRouter>
+      </TransitionProvider>
     </ToastProvider>
   );
 }
