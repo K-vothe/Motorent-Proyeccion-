@@ -18,23 +18,43 @@ export const crearMoto = async (datosMoto: any) => {
   });
 };
 
-// ====== MÉTODOS PARA OWNER (Dueño) ====== //
-// Nota: La lógica de la moto requiere validar y crear dueños, por eso están aquí.
-// Si tuvieras un owner.repository separado, irían allá, pero para empezar aquí está perfecto.
-
-export const buscarOwnerPorUserId = async (userId: string) => {
-  return await prisma.owner.findUnique({
-    where: { userId },
+/** Busca una moto por id incluyendo el usuario dueño (para validar permisos). */
+export const buscarMotoPorId = async (id: string) => {
+  return await prisma.moto.findUnique({
+    where: { id },
+    include: {
+      owner: { select: { idUser: true } },
+    },
   });
 };
 
-export const crearOwnerPendiente = async (userId: string) => {
-  return await prisma.owner.create({
-    data: {
-      userId,
-      bankName: "Pendiente",
-      accountType: "Pendiente",
-      accountNumber: "Pendiente",
+/**
+ * Obtiene las fotos tomadas en las inspecciones de DEVOLUCIÓN (HandoverType.RETURN)
+ * de todas las rentas de una moto, de la más reciente a la más antigua.
+ * Así la galería refleja el estado real del vehículo después de cada renta.
+ */
+export const obtenerEvidenciasDevolucion = async (motoId: string, limite = 12) => {
+  return await prisma.handoverEvidence.findMany({
+    where: {
+      handover: {
+        type: "RETURN",
+        rental: { motoId },
+      },
     },
+    orderBy: { createdAt: "desc" },
+    take: limite,
+    include: {
+      handover: {
+        select: { createdAt: true, mileage: true },
+      },
+    },
+  });
+};
+
+// ====== MÉTODOS PARA OWNER (Propietario) ====== //
+// Consulta el perfil de propietario alineado con el esquema actual (idUser).
+export const buscarOwnerPorUserId = async (userId: string) => {
+  return await prisma.owner.findUnique({
+    where: { idUser: userId },
   });
 };

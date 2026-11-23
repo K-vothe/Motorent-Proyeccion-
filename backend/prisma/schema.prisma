@@ -63,6 +63,12 @@ enum HandoverType {
   RETURN
 }
 
+enum ReviewTargetType {
+  MOTO
+  OWNER
+  RENTER
+}
+
 // ----------------------------------------------------
 // USER AND PROFILE MODELS
 // ----------------------------------------------------
@@ -88,6 +94,10 @@ model User {
   // Profiles
   owner     Owner?
   renter    Renter?
+
+  // Reviews (Fase 6)
+  reviewsWritten  Review[] @relation("ReviewsWritten")
+  reviewsReceived Review[] @relation("ReviewsReceived")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -184,6 +194,7 @@ model Moto {
 
   document      MotoDocument?
   rentals       Rental[]
+  reviews       Review[]
 
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
@@ -231,6 +242,7 @@ model Rental {
 
   contract      Contract?
   handovers     VehicleHandover[]
+  reviews       Review[]
 
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
@@ -276,4 +288,29 @@ model HandoverEvidence {
   handover    VehicleHandover @relation(fields: [handoverId], references: [id])
 
   createdAt   DateTime        @default(now())
+}
+
+// ----------------------------------------------------
+// REVIEWS & PUBLIC REPUTATION (FASE 6)
+// ----------------------------------------------------
+
+model Review {
+  id           String           @id @default(uuid())
+  rentalId     String
+  authorId     String
+  targetUserId String
+  motoId       String?
+  targetType   ReviewTargetType
+  rating       Int
+  comment      String?
+  visibleAt    DateTime
+
+  rental     Rental @relation(fields: [rentalId], references: [id])
+  author     User   @relation("ReviewsWritten", fields: [authorId], references: [id])
+  targetUser User   @relation("ReviewsReceived", fields: [targetUserId], references: [id])
+  moto       Moto?  @relation(fields: [motoId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@unique([rentalId, authorId, targetType])
 }

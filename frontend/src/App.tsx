@@ -4,12 +4,15 @@ import Navbar from "./components/Navbar";
 
 
 import ProtectedRoute from "./components/ProtectedRoute";
+import RoleRoute from "./components/RoleRoute";
 import Home from "./pages/Home/Home";
 import Login from "./pages/Login/Login";
 import Register from "./pages/Register/Register";
 import Dashboard from "./pages/Dashboard/dashboard";
 import Motos from "./pages/Motos/Motos";
 import Perfil from "./pages/perfil/perfil";
+import PerfilPublico from "./pages/PerfilPublico/PerfilPublico";
+import Configuracion from "./pages/Configuracion/Configuracion";
 import Rentas from "./pages/Rentas/rentas";
 import Contrato from "./pages/Contrato/Contrato";
 import PublicarMoto from "./pages/Publicarmoto/publicarmoto";
@@ -31,19 +34,42 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/motos" element={<Motos />} />
+        <Route path="/usuario/:id" element={<PerfilPublico />} />
         <Route path="/recuperar-password" element={<ForgotPassword />} />
         <Route path="/reset-password/:token" element={<ResetPassword />} />
         <Route path="/verificar-correo/:token" element={<VerificarCorreo />} />
-        <Route path="/verificar-renter" element={<VerificarRenter />} />
-        <Route path="/verificar-owner" element={<VerificarOwner />} />
 
-
+        {/* Rutas protegidas: requieren sesión iniciada (token JWT válido) */}
         <Route element={<ProtectedRoute />}>
-        <Route path="/perfil" element={<Perfil/>}/>
-        <Route path="/dashboard" element={<Dashboard/>} />
-        <Route path="/rentas" element={<Rentas />} />
-        <Route path="/contrato" element={<Contrato />} />
-        <Route path="/publicarmoto" element={<PublicarMoto />} />
+          <Route path="/perfil" element={<Perfil />} />
+          <Route path="/configuracion" element={<Configuracion />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/contrato" element={<Contrato />} />
+          <Route path="/verificar-renter" element={<VerificarRenter />} />
+          <Route path="/verificar-owner" element={<VerificarOwner />} />
+
+          {/* Rutas restringidas por rol verificado */}
+          <Route
+            element={
+              <RoleRoute
+                rolesPermitidos={["RENTER", "ADMIN"]}
+                tipoRequerido="renter"
+              />
+            }
+          >
+            <Route path="/rentas" element={<Rentas />} />
+          </Route>
+
+          <Route
+            element={
+              <RoleRoute
+                rolesPermitidos={["OWNER", "ADMIN"]}
+                tipoRequerido="owner"
+              />
+            }
+          >
+            <Route path="/publicarmoto" element={<PublicarMoto />} />
+          </Route>
         </Route>
 
       </Routes>

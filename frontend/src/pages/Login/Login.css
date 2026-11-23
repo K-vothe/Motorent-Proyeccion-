@@ -212,6 +212,18 @@
   text-decoration: underline;
 }
 
+.auth-success-banner {
+  background-color: rgba(52, 211, 153, 0.14);
+  border: 1px solid #34D399;
+  color: #6EE7B7;
+  padding: 12px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 18px;
+  line-height: 1.45;
+}
+
 /* Responsive */
 @media (max-width: 480px) {
   .auth-card {

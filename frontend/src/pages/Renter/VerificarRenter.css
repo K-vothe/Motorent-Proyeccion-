@@ -460,11 +460,151 @@
   background-color: #e2e7ea;
 }
 
+.form-actions button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* =========================
+   ESTADOS DE VALIDACIÓN Y ÉXITO
+========================= */
+
+.renter-error-banner {
+  margin-bottom: 22px;
+  padding: 12px 16px;
+  border: 1px solid #fca5a5;
+  border-radius: 10px;
+  background-color: #fef2f2;
+  color: #991b1b;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.form-group input.input-error,
+.form-group select.input-error {
+  border-color: #dc2626;
+  background-color: #fef2f2;
+}
+
+.field-error-text {
+  margin: 0;
+  color: #dc2626;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.renter-success-card {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+.renter-success-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background-color: #dcfce7;
+  color: #166534;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  font-weight: 800;
+}
+
+.renter-status-pill {
+  padding: 5px 14px;
+  border-radius: 999px;
+  background-color: #fef3c7;
+  color: #92400e;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+}
+
+.renter-success-card h1 {
+  margin: 4px 0 0;
+  color: #0f2537;
+  font-size: 26px;
+}
+
+.renter-success-text {
+  margin: 0;
+  max-width: 520px;
+  color: #556470;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.renter-summary-box {
+  width: 100%;
+  max-width: 500px;
+  margin-top: 8px;
+  padding: 16px 20px;
+  border-radius: 12px;
+  background-color: #f4f7f6;
+  border: 1px solid #e2e8f0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  text-align: left;
+}
+
+.renter-summary-box span {
+  display: block;
+  color: #66727c;
+  font-size: 11px;
+  margin-bottom: 3px;
+}
+
+.renter-summary-box strong {
+  color: #0f2537;
+  font-size: 14px;
+}
+
+.renter-sim-notice {
+  margin: 4px 0 0;
+  max-width: 500px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background-color: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1e40af;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.renter-success-actions {
+  margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+}
+
+.link-button {
+  min-height: 44px;
+  padding: 0 21px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 650;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: 0.2s;
+}
+
 /* =========================
    RESPONSIVE
 ========================= */
 
 @media (max-width: 650px) {
+  .renter-summary-box {
+    grid-template-columns: 1fr;
+  }
   .renter-page {
     padding: 20px 12px;
   }

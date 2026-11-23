@@ -1,4 +1,5 @@
 import * as motoRepository from "../repositories/moto.repository.js";
+import { obtenerPortadaMoto } from "./moto-galeria.service.js";
 
 interface CrearMotoData {
   brand: string;
@@ -12,7 +13,15 @@ interface CrearMotoData {
 }
 
 export const obtenerTodasLasMotos = async () => {
-  return await motoRepository.obtenerTodasLasMotos();
+  const motos = await motoRepository.obtenerTodasLasMotos();
+
+  // Agregamos la foto de portada (si el propietario subió fotos) para las tarjetas del catálogo
+  return await Promise.all(
+    motos.map(async (moto) => ({
+      ...moto,
+      fotoPortada: await obtenerPortadaMoto(moto.id),
+    }))
+  );
 };
 
 export const registrarMoto = async (userId: string, data: CrearMotoData) => {
@@ -54,11 +63,13 @@ export const registrarMoto = async (userId: string, data: CrearMotoData) => {
     throw new Error("Esta placa ya esta registrada");
   }
 
-  // Buscar o crear el perfil de Owner usando el repositorio
-  let owner = await motoRepository.buscarOwnerPorUserId(userId);
+  // Validar que el usuario tenga un perfil de Propietario verificado y aprobado
+  const owner = await motoRepository.buscarOwnerPorUserId(userId);
 
-  if (!owner) {
-    owner = await motoRepository.crearOwnerPendiente(userId);
+  if (!owner || owner.estadoVerificacion !== "APPROVED") {
+    throw new Error(
+      "Debes completar y aprobar tu verificación de propietario antes de publicar una motocicleta"
+    );
   }
 
   // 3. Crear el recurso

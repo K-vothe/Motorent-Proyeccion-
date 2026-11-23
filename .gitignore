@@ -15,3 +15,6 @@ Thumbs.db
 # Builds
 dist/
 build/
+
+# Documentos privados cargados localmente
+backend/uploads/

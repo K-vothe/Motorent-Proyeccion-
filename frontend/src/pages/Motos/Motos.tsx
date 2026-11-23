@@ -1,39 +1,44 @@
 // frontend/src/pages/Motos/Motos.tsx
-import "./Motos.css";
-import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
-
-interface Moto {
-  id: number | string;
-  brand: string;
-  model: string;
-  year: number;
-  displacement: number | string;
-  dailyRate: number | string;
-  licensePlate?: string;
-  color?: string;
-  category?: string;
-  KM?: number;
-  description?: string;
-}
-
-
+import { useEffect, useState } from "react";
 import motoDefaultImg from "../../assets/imagenes/moto1.jpeg";
+import { IconAlert, IconClose, IconSearch, IconSliders } from "../../components/Icons";
+import { leerUsuarioLocal } from "../../services/dashboard.service";
+import { API_URL, obtenerCatalogoMotos } from "../../services/motos.service";
+import { obtenerEstadoVerificacionLocal } from "../../services/verificacion.service";
+import {
+  filtrarYOrdenarMotos,
+  paginarLista,
+  resolverUrlFoto,
+  type MotoCatalogo,
+  type OrdenCatalogo,
+  type RangoCilindraje,
+} from "../../utils/moto.utils";
+import {
+  EVENTO_PREFERENCIAS,
+  leerPreferencias,
+  type TamanoPaginaCatalogo,
+} from "../../utils/preferencias.storage";
+import { leerPreviewDev } from "../../utils/rolActivo.storage";
+import { obtenerResumenRoles } from "../../utils/roles.utils";
+import MotoCard from "./components/MotoCard";
+import MotoDetalleModal from "./components/MotoDetalleModal";
+import "./Motos.css";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
-
-// Motos de muestra en caso de que el backend esté apagado o sin conexión
-const motosRespaldo: Moto[] = [
+// Motos de respaldo si el backend está apagado o la BD local aún no tiene registros
+const motosRespaldo: MotoCatalogo[] = [
   {
     id: "ejemplo-1",
     brand: "Yamaha",
     model: "MT-03",
     year: 2023,
     displacement: 321,
+    KM: 8400,
+    color: "Negro Mate",
     dailyRate: 85000,
     licensePlate: "KTM45G",
     category: "Viaje",
-    description: "Excelente para carretera y escapadas de fin de semana. Gran estabilidad y frenos ABS.",
+    description:
+      "Excelente para carretera y escapadas de fin de semana. Mantenimiento al día y entrega con inspección fotográfica.",
   },
   {
     id: "ejemplo-2",
@@ -41,81 +46,165 @@ const motosRespaldo: Moto[] = [
     model: "CB160F",
     year: 2024,
     displacement: 160,
+    KM: 3200,
+    color: "Rojo Perlado",
     dailyRate: 45000,
     licensePlate: "HND16B",
     category: "Uso diario",
-    description: "La moto urbana perfecta. Muy bajo consumo de combustible y ágil entre el tráfico.",
+    description:
+      "Ágil en tráfico urbano, bajo consumo de combustible y mantenimiento verificado tras cada renta.",
+  },
+  {
+    id: "ejemplo-3",
+    brand: "TVS",
+    model: "Raider 125",
+    year: 2025,
+    displacement: 125,
+    KM: 1900,
+    color: "Azul Grafito",
+    dailyRate: 38000,
+    licensePlate: "TVS12C",
+    category: "Trabajo",
+    description:
+      "Económica, ligera y apta para licencia A1. Ideal para recorridos urbanos diarios.",
   },
 ];
 
+const ETIQUETAS_RANGO_CC: Record<RangoCilindraje, string> = {
+  TODOS: "Todos los cc",
+  HASTA_125: "Hasta 125 cc (A1)",
+  "150_250": "150 – 250 cc",
+  MAS_300: "300+ cc",
+};
+
+function obtenerFotoLocalPorPlaca(placa?: string): string | null {
+  if (!placa) return null;
+  return localStorage.getItem(`foto_moto_${placa.toUpperCase()}`);
+}
+
 function Motos() {
-  const [motos, setMotos] = useState<Moto[]>([]);
+  const [motos, setMotos] = useState<MotoCatalogo[]>([]);
   const [cargando, setCargando] = useState(true);
+
+  // Filtros (panel de precisión oculto por defecto hasta que el usuario lo despliegue)
+  const [filtrosAbiertos, setFiltrosAbiertos] = useState(false);
   const [busqueda, setBusqueda] = useState("");
   const [categoria, setCategoria] = useState("Todas");
-  const [motoSeleccionada, setMotoSeleccionada] = useState<Moto | null>(null);
+  const [rangoCc, setRangoCc] = useState<RangoCilindraje>("TODOS");
+  const [ccTexto, setCcTexto] = useState("");
+  const [orden, setOrden] = useState<OrdenCatalogo>("RELEVANCIA");
+  const [porPagina, setPorPagina] = useState<TamanoPaginaCatalogo>(
+    () => leerPreferencias().motosPorPagina
+  );
+  const [pagina, setPagina] = useState(1);
 
-  const hoy = new Date().toISOString().split("T")[0];
-  const [fechaInicio, setFechaInicio] = useState(hoy);
-  const [fechaFin, setFechaFin] = useState(hoy);
+  const [motoSeleccionada, setMotoSeleccionada] = useState<MotoCatalogo | null>(
+    null
+  );
 
   const token = localStorage.getItem("token");
-  const haySesion = token && token !== "undefined" && token !== "null";
+  const haySesion = Boolean(token && token !== "undefined" && token !== "null");
 
-  // 1. CARGAR MOTOS REALES DESDE EL BACKEND
+  const previewDev = import.meta.env.DEV ? leerPreviewDev() : "REAL";
+  const resumenUsuario = haySesion
+    ? previewDev === "RENTER" || previewDev === "DUAL"
+      ? obtenerResumenRoles({
+          role: "RENTER",
+          renter: { estadoVerificacion: "APPROVED" },
+        })
+      : previewDev === "ADMIN"
+      ? obtenerResumenRoles({ role: "ADMIN" })
+      : previewDev === "OWNER"
+      ? obtenerResumenRoles({
+          role: "OWNER",
+          owner: { estadoVerificacion: "APPROVED" },
+        })
+      : previewDev === "USER"
+      ? obtenerResumenRoles(
+          { role: "USER" },
+          obtenerEstadoVerificacionLocal("renter"),
+          obtenerEstadoVerificacionLocal("owner")
+        )
+      : obtenerResumenRoles(
+          leerUsuarioLocal(),
+          obtenerEstadoVerificacionLocal("renter"),
+          obtenerEstadoVerificacionLocal("owner")
+        )
+    : null;
+
+  const puedeSolicitarRenta = Boolean(
+    resumenUsuario && (resumenUsuario.puedeVerModoRenter || resumenUsuario.esAdmin)
+  );
+  const verificacionEnRevision = resumenUsuario?.estadoRenter === "PENDING";
+
+  // Sincronizar tamaño de página si el usuario lo cambia en /configuracion
   useEffect(() => {
-    fetch(`${API_URL}/api/motos`)
-      .then((res) => res.json())
-      .then((resJson) => {
-        // El backend devuelve { status: "success", mensaje: "...", data: [...] }
-        const lista = Array.isArray(resJson)
-          ? resJson
-          : Array.isArray(resJson?.data)
-          ? resJson.data
-          : [];
-
-        if (lista.length > 0) {
-          // Asignamos una categoría por defecto si en la DB no viene
-          const motosFormateadas = lista.map((m: any) => ({
-            ...m,
-            category: m.category || (Number(m.displacement) >= 250 ? "Viaje" : "Uso diario"),
-            description: m.description || `Moto ${m.brand} ${m.model} año ${m.year} en excelente estado mecánico.`,
-          })) as Moto[];
-          setMotos(motosFormateadas);
-        } else {
-          // Si la DB está vacía, mostramos las de respaldo
-          setMotos(motosRespaldo);
-        }
-        setCargando(false);
-      })
-      .catch((err) => {
-        console.error("Error al cargar motos del backend:", err);
-        setMotos(motosRespaldo);
-        setCargando(false);
-      });
+    function sincronizarPrefs() {
+      setPorPagina(leerPreferencias().motosPorPagina);
+      setPagina(1);
+    }
+    window.addEventListener(EVENTO_PREFERENCIAS, sincronizarPrefs);
+    return () => window.removeEventListener(EVENTO_PREFERENCIAS, sincronizarPrefs);
   }, []);
 
-  const calcularDias = () => {
-    const inicio = new Date(fechaInicio);
-    const fin = new Date(fechaFin);
-    const diferenciaMs = fin.getTime() - inicio.getTime();
-    const dias = Math.ceil(diferenciaMs / (1000 * 60 * 60 * 24));
-    return dias <= 0 ? 1 : dias;
-  };
+  // Cargar catálogo real desde el backend (con respaldo limpio si está vacío o apagado)
+  useEffect(() => {
+    let activo = true;
 
-  const diasRenta = calcularDias();
-  const tarifaNumero = Number(motoSeleccionada?.dailyRate) || 0;
-  const precioTotal = tarifaNumero * diasRenta;
+    async function cargarMotos() {
+      const resultado = await obtenerCatalogoMotos();
+      if (!activo) return;
 
-  // Filtrado por búsqueda y categoría
-  const motosFiltradas = motos.filter((moto) => {
-    const coincideBusqueda = `${moto.brand} ${moto.model} ${moto.licensePlate || ""}`
-      .toLowerCase()
-      .includes(busqueda.toLowerCase());
-    const cat = moto.category || "Uso diario";
-    const coincideCategoria = categoria === "Todas" || cat === categoria;
-    return coincideBusqueda && coincideCategoria;
+      if (resultado.ok && resultado.data && resultado.data.length > 0) {
+        setMotos(resultado.data);
+      } else {
+        setMotos(motosRespaldo);
+      }
+      setCargando(false);
+    }
+
+    cargarMotos();
+    return () => {
+      activo = false;
+    };
+  }, []);
+
+  const ccNumero = Number(ccTexto);
+  const ccObjetivo =
+    ccTexto.trim() !== "" && Number.isFinite(ccNumero) && ccNumero > 0
+      ? ccNumero
+      : null;
+
+  const resultadoFiltro = filtrarYOrdenarMotos(motos, {
+    busqueda,
+    categoria,
+    rangoCc,
+    ccObjetivo,
+    orden,
   });
+
+  const paginacion = paginarLista(resultadoFiltro.motos, pagina, porPagina);
+
+  const cantidadFiltrosPrecision =
+    (categoria !== "Todas" ? 1 : 0) +
+    (ccObjetivo !== null || rangoCc !== "TODOS" ? 1 : 0) +
+    (orden !== "RELEVANCIA" ? 1 : 0);
+
+  const hayFiltrosActivos = Boolean(
+    busqueda.trim() ||
+      categoria !== "Todas" ||
+      rangoCc !== "TODOS" ||
+      ccObjetivo !== null
+  );
+
+  function limpiarTodosLosFiltros() {
+    setBusqueda("");
+    setCategoria("Todas");
+    setRangoCc("TODOS");
+    setCcTexto("");
+    setOrden("RELEVANCIA");
+    setPagina(1);
+  }
 
   return (
     <div className="motos-page">
@@ -123,237 +212,348 @@ function Motos() {
         <div className="motos-heading">
           <div>
             <h1>Catálogo de Motocicletas</h1>
-            <p>Elige tu moto ideal y resérvala con entrega inmediata</p>
+            <p>
+              Compara las especificaciones clave, filtra por cilindraje y abre
+              cualquier motocicleta para ver su galería completa.
+            </p>
           </div>
           <span className="count-badge">
-            {cargando ? "Cargando..." : `${motosFiltradas.length} motos disponibles`}
+            {cargando
+              ? "Cargando..."
+              : `Mostrando ${paginacion.desde}–${paginacion.hasta} de ${paginacion.totalItems}`}
           </span>
         </div>
 
-        {/* Buscador y Filtros */}
-        <div style={{ marginBottom: "20px" }}>
-          <input
-            type="text"
-            placeholder="Buscar por marca, modelo o placa..."
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-            style={{
-              width: "100%",
-              maxWidth: "400px",
-              padding: "10px 16px",
-              borderRadius: "20px",
-              border: "1.5px solid #CBD5E0",
-              outline: "none",
-              fontSize: "14px",
-            }}
-          />
-        </div>
+        {/* BARRA COMPACTA DE BÚSQUEDA + DESPLEGABLE DE FILTROS DE PRECISIÓN */}
+        <section className="motos-toolbar" aria-label="Búsqueda y filtros del catálogo">
+          <div className="motos-search-bar-row">
+            <label className="motos-search-field">
+              <IconSearch size={16} />
+              <input
+                type="text"
+                placeholder="Buscar por marca, modelo, color o placa..."
+                value={busqueda}
+                onChange={(e) => {
+                  setBusqueda(e.target.value);
+                  setPagina(1);
+                }}
+              />
+            </label>
 
-        <div className="category-filters">
-          {["Todas", "Viaje", "Uso diario", "Trabajo"].map((cat) => (
             <button
-              key={cat}
-              className={categoria === cat ? "filter-chip active" : "filter-chip"}
-              onClick={() => setCategoria(cat)}
+              type="button"
+              className={`motos-filter-toggle ${filtrosAbiertos ? "active" : ""}`}
+              aria-expanded={filtrosAbiertos}
+              onClick={() => setFiltrosAbiertos((prev) => !prev)}
             >
-              {cat}
+              <IconSliders size={16} />
+              <span>Filtros</span>
+              {cantidadFiltrosPrecision > 0 && (
+                <span className="motos-filter-count">
+                  {cantidadFiltrosPrecision}
+                </span>
+              )}
             </button>
-          ))}
-        </div>
+          </div>
 
-        {/* Listado de Tarjetas */}
+          {/* PANEL DESPLEGABLE (OCULTO POR DEFECTO) */}
+          {filtrosAbiertos && (
+            <div className="motos-filters-drawer">
+              <div className="motos-drawer-grid">
+                <label className="motos-cc-field">
+                  <span>Cilindraje exacto o cercano (cc)</span>
+                  <input
+                    type="number"
+                    min={50}
+                    max={2000}
+                    step={25}
+                    placeholder="Ej. 200"
+                    value={ccTexto}
+                    onChange={(e) => {
+                      setCcTexto(e.target.value);
+                      if (e.target.value.trim()) setRangoCc("TODOS");
+                      setPagina(1);
+                    }}
+                  />
+                </label>
+
+                <label className="motos-select-field">
+                  <span>Ordenar por</span>
+                  <select
+                    value={orden}
+                    onChange={(e) => {
+                      setOrden(e.target.value as OrdenCatalogo);
+                      setPagina(1);
+                    }}
+                  >
+                    <option value="RELEVANCIA">Relevancia</option>
+                    <option value="PRECIO_ASC">Menor precio</option>
+                    <option value="PRECIO_DESC">Mayor precio</option>
+                    <option value="KM_ASC">Menor kilometraje</option>
+                    <option value="CC_DESC">Mayor cilindraje</option>
+                  </select>
+                </label>
+
+                <label className="motos-select-field">
+                  <span>Motocicletas por página</span>
+                  <select
+                    value={porPagina}
+                    onChange={(e) => {
+                      setPorPagina(Number(e.target.value) as TamanoPaginaCatalogo);
+                      setPagina(1);
+                    }}
+                  >
+                    <option value={12}>12 motos</option>
+                    <option value={24}>24 motos</option>
+                    <option value={30}>30 motos</option>
+                  </select>
+                </label>
+              </div>
+
+              <div className="motos-chips-row">
+                <div className="category-filters" role="group" aria-label="Categorías">
+                  {["Todas", "Viaje", "Uso diario", "Trabajo"].map((cat) => (
+                    <button
+                      key={cat}
+                      type="button"
+                      className={
+                        categoria === cat ? "filter-chip active" : "filter-chip"
+                      }
+                      onClick={() => {
+                        setCategoria(cat);
+                        setPagina(1);
+                      }}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="motos-cc-chips" role="group" aria-label="Rangos de cilindraje">
+                  <span className="motos-cc-chips-label">Rangos:</span>
+                  {(["TODOS", "HASTA_125", "150_250", "MAS_300"] as RangoCilindraje[]).map(
+                    (rango) => (
+                      <button
+                        key={rango}
+                        type="button"
+                        className={`filter-chip filter-chip--sm ${
+                          rangoCc === rango && ccObjetivo === null ? "active" : ""
+                        }`}
+                        onClick={() => {
+                          setRangoCc(rango);
+                          setCcTexto("");
+                          setPagina(1);
+                        }}
+                      >
+                        {ETIQUETAS_RANGO_CC[rango]}
+                      </button>
+                    )
+                  )}
+                </div>
+              </div>
+
+              <div className="motos-drawer-footer">
+                {hayFiltrosActivos && (
+                  <button
+                    type="button"
+                    className="motos-clear-all"
+                    onClick={limpiarTodosLosFiltros}
+                  >
+                    Limpiar filtros
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="motos-drawer-done"
+                  onClick={() => setFiltrosAbiertos(false)}
+                >
+                  Ver resultados ({paginacion.totalItems})
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* RESUMEN DE FILTROS ACTIVOS (Patrón Baymard Institute) */}
+          {hayFiltrosActivos && (
+            <div className="motos-active-filters">
+              <span className="motos-active-label">Filtros activos:</span>
+              {busqueda.trim() && (
+                <button
+                  type="button"
+                  className="motos-active-chip"
+                  onClick={() => setBusqueda("")}
+                >
+                  <span>Texto: "{busqueda.trim()}"</span>
+                  <IconClose size={13} />
+                </button>
+              )}
+              {categoria !== "Todas" && (
+                <button
+                  type="button"
+                  className="motos-active-chip"
+                  onClick={() => setCategoria("Todas")}
+                >
+                  <span>Categoría: {categoria}</span>
+                  <IconClose size={13} />
+                </button>
+              )}
+              {ccObjetivo !== null && (
+                <button
+                  type="button"
+                  className="motos-active-chip"
+                  onClick={() => setCcTexto("")}
+                >
+                  <span>Cilindraje: {ccObjetivo} cc</span>
+                  <IconClose size={13} />
+                </button>
+              )}
+              {rangoCc !== "TODOS" && ccObjetivo === null && (
+                <button
+                  type="button"
+                  className="motos-active-chip"
+                  onClick={() => setRangoCc("TODOS")}
+                >
+                  <span>{ETIQUETAS_RANGO_CC[rangoCc]}</span>
+                  <IconClose size={13} />
+                </button>
+              )}
+              <button
+                type="button"
+                className="motos-clear-all"
+                onClick={limpiarTodosLosFiltros}
+              >
+                Limpiar todo
+              </button>
+            </div>
+          )}
+        </section>
+
+        {/* AVISO DE COINCIDENCIA MÁS CERCANA POR CILINDRAJE */}
+        {!cargando &&
+          resultadoFiltro.coincidenciaCc === "CERCANA" &&
+          ccObjetivo !== null && (
+            <div className="motos-nearest-banner" role="status">
+              <IconAlert size={17} />
+              <span>
+                No encontramos motocicletas exactas de{" "}
+                <strong>{ccObjetivo} cc</strong>. Te mostramos las opciones más
+                cercanas ordenadas por proximidad
+                {resultadoFiltro.ccMasCercano
+                  ? ` (más cercana: ${resultadoFiltro.ccMasCercano} cc).`
+                  : "."}
+              </span>
+            </div>
+          )}
+
+        {/* GRID DE TARJETAS COMPACTAS */}
         {cargando ? (
-          <p style={{ textAlign: "center", padding: "40px", color: "var(--text-muted)" }}>
-            Consultando motocicletas en la base de datos...
+          <p
+            style={{
+              textAlign: "center",
+              padding: "40px",
+              color: "var(--text-muted)",
+            }}
+          >
+            Consultando motocicletas disponibles...
           </p>
         ) : (
           <div className="motos-grid">
-            {motosFiltradas.map((moto) => {
-              // Buscar foto guardada en el navegador para esta placa
-              const fotoLocal = moto.licensePlate
-                ? localStorage.getItem(`foto_moto_${moto.licensePlate.toUpperCase()}`)
-                : null;
+            {paginacion.itemsPagina.map((moto) => {
+              const fotoLocal = obtenerFotoLocalPorPlaca(moto.licensePlate);
+              const fotoPortada = moto.fotoPortada
+                ? resolverUrlFoto(moto.fotoPortada, API_URL)
+                : fotoLocal || motoDefaultImg;
 
               return (
-                <div className="moto-card" key={moto.id}>
-                  <div
-                    className="moto-image-placeholder"
-                    style={{ position: "relative", overflow: "hidden" }}
-                  >
-                    <img
-                      src={fotoLocal || motoDefaultImg}
-                      alt={`${moto.brand} ${moto.model}`}
-                      style={{
-                        position: "absolute",
-                        top: 0,
-                        left: 0,
-                        width: "100%",
-                        height: "100%",
-                        objectFit: "cover",
-                      }}
-                    />
-
-                    <span
-                      className="category-badge"
-                      style={{ position: "relative", zIndex: 2 }}
-                    >
-                      {moto.category || "Uso diario"}
-                    </span>
-                    <span
-                      className="displacement-badge"
-                      style={{ position: "relative", zIndex: 2 }}
-                    >
-                      {moto.displacement} cc
-                    </span>
-                  </div>
-
-                  <div className="moto-card-body">
-                    <h3>
-                      {moto.brand} {moto.model}
-                    </h3>
-                    <p className="moto-specs">
-                      Año {moto.year} {moto.licensePlate && `• Placa: ${moto.licensePlate}`}
-                    </p>
-
-                    <div className="moto-card-footer">
-                      <div className="moto-price-box">
-                        <span className="price-label">Tarifa diaria</span>
-                        <span className="moto-price">
-                          ${Number(moto.dailyRate).toLocaleString("es-CO")}
-                          <span className="day-text">/día</span>
-                        </span>
-                      </div>
-
-                      <button
-                        className="rent-button"
-                        onClick={() => setMotoSeleccionada(moto)}
-                      >
-                        Rentar
-                      </button>
-                    </div>
-                  </div>
-                </div>
+                <MotoCard
+                  key={moto.id}
+                  moto={moto}
+                  fotoPortada={fotoPortada}
+                  fotoRespaldo={motoDefaultImg}
+                  onVerDetalle={setMotoSeleccionada}
+                />
               );
             })}
           </div>
         )}
 
-        {!cargando && motosFiltradas.length === 0 && (
+        {!cargando && paginacion.totalItems === 0 && (
           <div className="no-results-box">
-            <p className="no-results">No se encontraron motos con esa búsqueda.</p>
+            <p className="no-results">
+              No se encontraron motos con esa combinación de filtros.
+            </p>
             <button
+              type="button"
               className="reset-filter-btn"
-              onClick={() => {
-                setBusqueda("");
-                setCategoria("Todas");
-              }}
+              onClick={limpiarTodosLosFiltros}
             >
               Ver todas las motos
             </button>
           </div>
         )}
-      </main>
 
-      {/* Modal de Detalle */}
-      {motoSeleccionada && (
-        <div className="modal-overlay" onClick={() => setMotoSeleccionada(null)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <button className="modal-close" onClick={() => setMotoSeleccionada(null)}>
-              ✕
+        {/* PAGINACIÓN NUMERADA (24–30 MOTOS POR PÁGINA) */}
+        {!cargando && paginacion.totalPaginas > 1 && (
+          <nav className="motos-pagination" aria-label="Paginación del catálogo">
+            <button
+              type="button"
+              className="motos-page-btn"
+              disabled={paginacion.paginaSegura <= 1}
+              onClick={() => {
+                setPagina(paginacion.paginaSegura - 1);
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
+            >
+              Anterior
             </button>
 
-            <div className="modal-header">
-              <span className="modal-category">
-                {motoSeleccionada.category || "Uso diario"}
-              </span>
-              <h2>
-                {motoSeleccionada.brand} {motoSeleccionada.model} ({motoSeleccionada.year})
-              </h2>
-              <p className="modal-description">{motoSeleccionada.description}</p>
+            <div className="motos-page-numbers">
+              {Array.from(
+                { length: paginacion.totalPaginas },
+                (_, i) => i + 1
+              ).map((num) => (
+                <button
+                  key={num}
+                  type="button"
+                  className={`motos-page-btn ${
+                    num === paginacion.paginaSegura ? "active" : ""
+                  }`}
+                  onClick={() => {
+                    setPagina(num);
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                  }}
+                >
+                  {num}
+                </button>
+              ))}
             </div>
 
-            <div className="modal-body-grid">
-              <div className="modal-specs-section">
-                <h3>Ficha técnica y beneficios</h3>
-                <div className="specs-list">
-                  <div className="spec-row">
-                    <span className="spec-name">🏍️ Cilindraje:</span>
-                    <strong>{motoSeleccionada.displacement} cc</strong>
-                  </div>
-                  <div className="spec-row">
-                    <span className="spec-name">📄 Placa:</span>
-                    <strong>{motoSeleccionada.licensePlate || "Verificada"}</strong>
-                  </div>
-                  <div className="spec-row">
-                    <span className="spec-name">🛡️ Documentos:</span>
-                    <strong className="badge-valid">SOAT y Tecno al día</strong>
-                  </div>
-                </div>
-              </div>
+            <button
+              type="button"
+              className="motos-page-btn"
+              disabled={paginacion.paginaSegura >= paginacion.totalPaginas}
+              onClick={() => {
+                setPagina(paginacion.paginaSegura + 1);
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
+            >
+              Siguiente
+            </button>
+          </nav>
+        )}
+      </main>
 
-              <div className="modal-rental-calculator">
-                <h3>Calcula tu alquiler</h3>
-
-                <div className="date-inputs">
-                  <div className="input-group">
-                    <label>Fecha de recogida:</label>
-                    <input
-                      type="date"
-                      min={hoy}
-                      value={fechaInicio}
-                      onChange={(e) => setFechaInicio(e.target.value)}
-                    />
-                  </div>
-
-                  <div className="input-group">
-                    <label>Fecha de devolución:</label>
-                    <input
-                      type="date"
-                      min={fechaInicio}
-                      value={fechaFin}
-                      onChange={(e) => setFechaFin(e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <div className="cost-summary">
-                  <div className="summary-row">
-                    <span>Días seleccionados:</span>
-                    <strong>{diasRenta} {diasRenta === 1 ? "día" : "días"}</strong>
-                  </div>
-                  <div className="summary-row">
-                    <span>Tarifa diaria:</span>
-                    <span>${tarifaNumero.toLocaleString("es-CO")} COP</span>
-                  </div>
-                  <div className="summary-divider"></div>
-                  <div className="summary-row total-row">
-                    <span>Total a pagar:</span>
-                    <strong className="total-amount">${precioTotal.toLocaleString("es-CO")} COP</strong>
-                  </div>
-                </div>
-
-                {haySesion ? (
-                  <button
-                    className="btn-confirm-rental"
-                    onClick={() => {
-                      alert(`¡Solicitud enviada para la ${motoSeleccionada.brand} ${motoSeleccionada.model}!`);
-                      setMotoSeleccionada(null);
-                    }}
-                  >
-                    Confirmar y Solicitar Renta
-                  </button>
-                ) : (
-                  <div className="guest-modal-action">
-                    <p>Debes iniciar sesión para completar la reserva</p>
-                    <Link to="/login" className="btn-modal-login">
-                      Iniciar sesión para reservar
-                    </Link>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
+      {/* FICHA COMPLETA CON GALERÍA ACTUALIZADA Y CALCULADORA */}
+      {motoSeleccionada && (
+        <MotoDetalleModal
+          moto={motoSeleccionada}
+          fotoLocal={obtenerFotoLocalPorPlaca(motoSeleccionada.licensePlate)}
+          fotoRespaldo={motoDefaultImg}
+          haySesion={haySesion}
+          puedeSolicitarRenta={puedeSolicitarRenta}
+          verificacionEnRevision={verificacionEnRevision}
+          onCerrar={() => setMotoSeleccionada(null)}
+        />
       )}
     </div>
   );

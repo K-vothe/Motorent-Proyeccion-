@@ -1,66 +1,177 @@
-import { useState, useEffect } from "react";
-import "./Dashboard.css";
-import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { IconAlert, IconKey, IconMoto } from "../../components/Icons";
+import {
+  cargarDatosDashboard,
+  ESTADISTICAS_INICIALES,
+  leerUsuarioLocal,
+  type EstadisticasDashboard,
+  type RentaActiva,
+} from "../../services/dashboard.service";
+import { obtenerEstadoVerificacionLocal } from "../../services/verificacion.service";
+import {
+  EVENTO_CAMBIO_ROL,
+  guardarModoActivo,
+  guardarPreviewDev,
+  leerModoActivo,
+  leerPreviewDev,
+  limpiarEstadoRolTemporal,
+  notificarCambioRol,
+  type SimuladorRolDev,
+} from "../../utils/rolActivo.storage";
+import {
+  obtenerResumenRoles,
+  type ModoDashboard,
+  type ResumenRolesUsuario,
+  type UsuarioSesion,
+} from "../../utils/roles.utils";
+import DashboardAdminView from "./components/DashboardAdminView";
+import DashboardOwnerView from "./components/DashboardOwnerView";
+import DashboardRenterView from "./components/DashboardRenterView";
+import DashboardUserView from "./components/DashboardUserView";
+import "./dashboard.css";
+
+/**
+ * Construye un perfil simulado únicamente para la barra de pruebas en desarrollo
+ * (import.meta.env.DEV). No existe ni se renderiza en compilaciones de producción.
+ */
+function construirResumenSimulado(
+  simulacion: Exclude<SimuladorRolDev, "REAL">
+): ResumenRolesUsuario {
+  if (simulacion === "ADMIN") {
+    return obtenerResumenRoles({ role: "ADMIN" });
+  }
+  if (simulacion === "DUAL") {
+    return obtenerResumenRoles({
+      role: "USER",
+      renter: { estadoVerificacion: "APPROVED" },
+      owner: { estadoVerificacion: "APPROVED" },
+    });
+  }
+  if (simulacion === "OWNER") {
+    return obtenerResumenRoles({
+      role: "OWNER",
+      owner: { estadoVerificacion: "APPROVED" },
+    });
+  }
+  if (simulacion === "RENTER") {
+    return obtenerResumenRoles({
+      role: "RENTER",
+      renter: { estadoVerificacion: "APPROVED" },
+    });
+  }
+  return obtenerResumenRoles(
+    { role: "USER" },
+    obtenerEstadoVerificacionLocal("renter"),
+    obtenerEstadoVerificacionLocal("owner")
+  );
+}
 
 function Dashboard() {
-  // Leer el nombre del usuario desde localStorage
-  const savedUser = localStorage.getItem("user");
-  const usuario = savedUser ? JSON.parse(savedUser) : null;
-  const nombre = usuario?.fullName ? usuario.fullName.split(" ")[0] : "";
-  const token = localStorage.getItem("token");
+  const navigate = useNavigate();
 
-  const [estadisticas, setEstadisticas] = useState({
-    rentasComoCliente: 0,
-    motosPublicadas: 0,
-    gananciasDelMes: 0,
-    proximaDevolucion: "--",
-  });
-  
-  interface RentaActiva {
-    moto: string;
-    fechaDevolucion: string;
-    diasRestantes: number;
-    tarifaDiaria: number;
-  }
-  
+  const [usuario, setUsuario] = useState<UsuarioSesion | null>(() =>
+    leerUsuarioLocal()
+  );
+  const [estadisticas, setEstadisticas] = useState<EstadisticasDashboard>(
+    ESTADISTICAS_INICIALES
+  );
   const [rentaActiva, setRentaActiva] = useState<RentaActiva | null>(null);
   const [cargando, setCargando] = useState(true);
+  const [advertenciaApi, setAdvertenciaApi] = useState<string | null>(null);
+
+  // Modo seleccionado cuando el usuario tiene perfil dual (sincronizado con Navbar)
+  const [modoManual, setModoManual] = useState<ModoDashboard | null>(() =>
+    leerModoActivo()
+  );
+
+  // Selector temporal exclusivo de desarrollo (npm run dev) sincronizado con Navbar
+  const [rolPreviewDev, setRolPreviewDev] = useState<SimuladorRolDev>(() =>
+    leerPreviewDev()
+  );
 
   useEffect(() => {
-    const fetchStats = async () => {
-      if (!token) {
-        setCargando(false);
+    let componenteActivo = true;
+
+    async function inicializar() {
+      const resultado = await cargarDatosDashboard();
+
+      if (!componenteActivo) return;
+
+      if (resultado.sesionExpirada) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        limpiarEstadoRolTemporal();
+        navigate("/login", { replace: true });
         return;
       }
-      try {
-        const url = import.meta.env.VITE_API_URL || "http://localhost:3000";
-        const response = await fetch(`${url}/dashboard`, {
-          headers: {
-            "Authorization": `Bearer ${token}`
-          }
-        });
-        if (response.ok) {
-          const data = await response.json();
-          if (data.ok || data.status === 'success') {
-            const payload = data.data || data;
-            setEstadisticas(payload.estadisticas);
-            setRentaActiva(payload.rentaActiva);
-          }
-        }
-      } catch (error) {
-        console.error("Error al obtener las estadísticas del dashboard:", error);
-      } finally {
-        setCargando(false);
-      }
+
+      setUsuario(resultado.usuario);
+      setEstadisticas(resultado.estadisticas);
+      setRentaActiva(resultado.rentaActiva);
+      setAdvertenciaApi(resultado.advertenciaApi);
+      setCargando(false);
+      // Notificamos a la Navbar para que adopte el rol actualizado desde /auth/me
+      notificarCambioRol();
+    }
+
+    inicializar();
+
+    return () => {
+      componenteActivo = false;
     };
-    fetchStats();
-  }, [token]);
+  }, [navigate]);
+
+  // Si el usuario alterna el modo dual desde la Navbar, reflejamos el cambio aquí
+  useEffect(() => {
+    function sincronizarDesdeNavbar() {
+      setModoManual(leerModoActivo());
+      setRolPreviewDev(leerPreviewDev());
+    }
+
+    window.addEventListener(EVENTO_CAMBIO_ROL, sincronizarDesdeNavbar);
+    return () => {
+      window.removeEventListener(EVENTO_CAMBIO_ROL, sincronizarDesdeNavbar);
+    };
+  }, []);
+
+  // Calculamos el resumen real de roles combinando backend + estados locales de Fase 1
+  const resumenReal = obtenerResumenRoles(
+    usuario,
+    obtenerEstadoVerificacionLocal("renter"),
+    obtenerEstadoVerificacionLocal("owner")
+  );
+
+  const resumenActivo =
+    import.meta.env.DEV && rolPreviewDev !== "REAL"
+      ? construirResumenSimulado(rolPreviewDev)
+      : resumenReal;
+
+  const modoActual: ModoDashboard =
+    resumenActivo.esUsuarioDual &&
+    (modoManual === "RENTER" || modoManual === "OWNER")
+      ? modoManual
+      : resumenActivo.modoInicial;
+
+  const nombre = usuario?.fullName ? usuario.fullName.split(" ")[0] : "";
+
+  function seleccionarModoDual(nuevoModo: "RENTER" | "OWNER") {
+    setModoManual(nuevoModo);
+    guardarModoActivo(nuevoModo);
+  }
+
+  function seleccionarPreviewDev(opcion: SimuladorRolDev) {
+    setRolPreviewDev(opcion);
+    setModoManual(null);
+    guardarModoActivo(null);
+    guardarPreviewDev(opcion);
+  }
 
   if (cargando) {
     return (
       <div className="dashboard">
-        <main className="dashboard-content" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
-          <h2>Cargando tu panel...</h2>
+        <main className="dashboard-content dashboard-loading">
+          <p className="dashboard-loading-text">Cargando tu panel de control...</p>
         </main>
       </div>
     );
@@ -68,121 +179,121 @@ function Dashboard() {
 
   return (
     <div className="dashboard">
-
-      {/* ================================================================ */}
-      {/* 3. CONTENIDO PRINCIPAL                                           */}
-      {/* ================================================================ */}
       <main className="dashboard-content">
-        
-        {/* BANNER DE BIENVENIDA */}
-        <section className="welcome-banner">
-          <div>
-            <span className="welcome-tag">PANEL DE CONTROL</span>
-            <h1>¡Hola de nuevo{nombre ? `, ${nombre}` : ""}! 👋</h1>
-            <p className="welcome-description">
-              Revisa tus alquileres activos, tus ganancias como propietario y el estado de tu cuenta.
-            </p>
-          </div>
-        </section>
-
-        {/* ================================================================ */}
-        {/* 4. BANNER DE RENTA ACTIVA (SI EL USUARIO TIENE UNA MOTO RENTADA) */}
-        {/* ================================================================ */}
-        {rentaActiva && (
-          <section className="active-rental-banner">
-            <div className="active-rental-icon">🏍️</div>
-            <div className="active-rental-info">
-              <div className="active-rental-badge">EN CURSO</div>
-              <p className="active-rental-title">Tienes una {rentaActiva.moto} rentada</p>
-              <p className="active-rental-text">
-                Devolución programada: <strong>{rentaActiva.fechaDevolucion}</strong> ({rentaActiva.diasRestantes} días restantes).
-              </p>
+        {/* BARRA DE PRUEBA DE ROLES (VISIBLE SOLO EN MODO DESARROLLO) */}
+        {import.meta.env.DEV && (
+          <div
+            className="dev-role-bar"
+            aria-label="Vista previa de roles en desarrollo"
+          >
+            <span className="dev-role-label">
+              Vista previa de roles (solo desarrollo — actualiza panel y barra superior):
+            </span>
+            <div className="dev-role-buttons">
+              {(
+                ["REAL", "USER", "RENTER", "OWNER", "DUAL", "ADMIN"] as SimuladorRolDev[]
+              ).map((opcion) => (
+                <button
+                  key={opcion}
+                  type="button"
+                  className={`dev-role-btn ${
+                    rolPreviewDev === opcion ? "active" : ""
+                  }`}
+                  onClick={() => seleccionarPreviewDev(opcion)}
+                >
+                  {opcion === "REAL" ? "Mi rol real" : opcion}
+                </button>
+              ))}
             </div>
-            <Link to="/contrato" className="active-rental-button">
-              Ver contrato y acta digital →
-            </Link>
-          </section>
+          </div>
         )}
 
-        {/* ================================================================ */}
-        {/* 5. TARJETAS DE ESTADÍSTICAS (MÉTRICAS DEL USUARIO)               */}
-        {/* ================================================================ */}
-        <section className="stats-row">
-          {/* Métrica 1: Alquileres hechos como cliente */}
-          <div className="stat-card">
-            <span className="stat-icon">🛵</span>
-            <p className="stat-number">{estadisticas.rentasComoCliente}</p>
-            <p className="stat-label">Viajes realizados</p>
+        {/* BANNER DE BIENVENIDA + INSIGNIA DE ROL + SWITCH DUAL */}
+        <section className="welcome-banner welcome-banner--flex">
+          <div>
+            <div className="welcome-badges">
+              <span className="welcome-tag">PANEL DE CONTROL</span>
+              <span className="role-header-badge">
+                {resumenActivo.etiquetaRol}
+              </span>
+            </div>
+
+            <h1>Bienvenido{nombre ? `, ${nombre}` : ""}</h1>
+
+            <p className="welcome-description">
+              {modoActual === "USER" &&
+                "Completa tu verificación para comenzar a alquilar o publicar motocicletas."}
+              {modoActual === "RENTER" &&
+                "Consulta tu renta activa, tu historial de viajes y el catálogo disponible."}
+              {modoActual === "OWNER" &&
+                "Supervisa tus motocicletas publicadas y tus ingresos netos del mes."}
+              {modoActual === "ADMIN" &&
+                "Supervisión de cuentas, documentos de verificación y catálogo general."}
+            </p>
           </div>
 
-          {/* Métrica 2: Motos que el usuario tiene publicadas (Dueño) */}
-          <div className="stat-card">
-            <span className="stat-icon">🔑</span>
-            <p className="stat-number">{estadisticas.motosPublicadas}</p>
-            <p className="stat-label">Motos publicadas</p>
-          </div>
-
-          {/* Métrica 3: Ganancias generadas en el mes (Dueño) */}
-          <div className="stat-card highlight">
-            <span className="stat-icon">💰</span>
-            <p className="stat-number">${estadisticas.gananciasDelMes.toLocaleString("es-CO")}</p>
-            <p className="stat-label">Ganancias este mes (COP)</p>
-          </div>
-
-          {/* Métrica 4: Próxima devolución */}
-          <div className="stat-card">
-            <span className="stat-icon">📅</span>
-            <p className="stat-number">{estadisticas.proximaDevolucion}</p>
-            <p className="stat-label">Próxima entrega</p>
-          </div>
+          {/* SELECTOR DE MODO PARA USUARIOS CON AMBOS PERFILES */}
+          {resumenActivo.esUsuarioDual && (
+            <div
+              className="dual-role-switch"
+              role="tablist"
+              aria-label="Cambiar modo del panel"
+            >
+              <button
+                type="button"
+                role="tab"
+                aria-selected={modoActual === "RENTER"}
+                className={`dual-switch-btn ${
+                  modoActual === "RENTER" ? "active" : ""
+                }`}
+                onClick={() => seleccionarModoDual("RENTER")}
+              >
+                <IconMoto size={16} />
+                <span>Modo Arrendatario</span>
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={modoActual === "OWNER"}
+                className={`dual-switch-btn ${
+                  modoActual === "OWNER" ? "active" : ""
+                }`}
+                onClick={() => seleccionarModoDual("OWNER")}
+              >
+                <IconKey size={16} />
+                <span>Modo Propietario</span>
+              </button>
+            </div>
+          )}
         </section>
 
-        {/* ================================================================ */}
-        {/* 6. BANNER DE PROPIETARIOS: INVITACIÓN A PUBLICAR MOTOS           */}
-        {/* ================================================================ */}
-        <section className="owner-promo-card">
-          <div className="owner-promo-text">
-            <h3>¿Quieres generar ingresos pasivos?</h3>
-            <p>Pon tu moto en renta los días que no la uses. La plataforma te garantiza conductores verificados y pagos puntuales.</p>
+        {/* ADVERTENCIA SUAVE SI FALLÓ LA CONEXIÓN PARCIAL CON EL BACKEND */}
+        {advertenciaApi && (
+          <div className="dashboard-warning-banner" role="status">
+            <IconAlert size={17} />
+            <span>{advertenciaApi}</span>
           </div>
-          <Link to="/publicarmoto" className="btn-promo-publish">
-            Publicar mi moto gratis
-          </Link>
-        </section>
+        )}
 
-        {/* ================================================================ */}
-        {/* 7. ACCIONES RÁPIDAS (ATRIBUTOS DE NAVEGACIÓN)                     */}
-        {/* ================================================================ */}
-        <div className="section-title-box">
-          <h2>Acciones rápidas</h2>
-          <p>Todo lo que puedes hacer en MotoRent</p>
-        </div>
+        {/* CONTENIDO ADAPTADO SEGÚN EL ROL ACTIVO */}
+        {modoActual === "USER" && <DashboardUserView resumen={resumenActivo} />}
 
-        <section className="quick-actions">
-          {/* Acción 1: Ir al catálogo */}
-          <Link to="/motos" className="action-card">
-            <div className="action-number">01</div>
-            <h3>Explorar catálogo</h3>
-            <p>Descubre motocicletas de viaje, uso urbano o trabajo disponibles para hoy.</p>
-            <span className="action-link">Ver catálogo →</span>
-          </Link>
+        {modoActual === "RENTER" && (
+          <DashboardRenterView
+            estadisticas={estadisticas}
+            rentaActiva={rentaActiva}
+            resumen={resumenActivo}
+          />
+        )}
 
-          {/* Acción 2: Publicar moto */}
-          <Link to="/publicarmoto" className="action-card">
-            <div className="action-number">02</div>
-            <h3>Publicar mi moto</h3>
-            <p>Sube tu moto con placa, fotos y define tu tarifa diaria para empezar a ganar.</p>
-            <span className="action-link">Publicar moto →</span>
-          </Link>
+        {modoActual === "OWNER" && (
+          <DashboardOwnerView
+            estadisticas={estadisticas}
+            resumen={resumenActivo}
+          />
+        )}
 
-          {/* Acción 3: Ir a perfil */}
-          <Link to="/perfil" className="action-card">
-            <div className="action-number">03</div>
-            <h3>Mi perfil y documentos</h3>
-            <p>Verifica tu cédula, licencia de conducción y configura tu cuenta bancaria.</p>
-            <span className="action-link">Administrar perfil →</span>
-          </Link>
-        </section>
+        {modoActual === "ADMIN" && <DashboardAdminView />}
       </main>
     </div>
   );

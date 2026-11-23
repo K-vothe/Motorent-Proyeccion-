@@ -6,11 +6,11 @@ export const calcularEstadisticasDashboard = async (userId: string) => {
   let rentasComoCliente = 0;
   let rentaActiva = null;
   let proximaDevolucion = "--";
-  // 2. Lógica si es Cliente (Cálculos de días restantes y fechas)
-  if (user.client) {
-    rentasComoCliente = await dashboardRepo.obtenerRentasCliente(user.client.id);
-    
-    const activeRental = await dashboardRepo.obtenerRentaActivaCliente(user.client.id);
+  // 2. Lógica si tiene perfil de Arrendatario (cálculos de días restantes y fechas)
+  if (user.renter) {
+    rentasComoCliente = await dashboardRepo.obtenerRentasArrendatario(user.renter.id);
+
+    const activeRental = await dashboardRepo.obtenerRentaActivaArrendatario(user.renter.id);
     if (activeRental) {
       const endDate = new Date(activeRental.endDate);
       const hoy = new Date();

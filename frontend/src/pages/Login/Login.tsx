@@ -1,15 +1,33 @@
 import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import logo from "../../assets/logo/logo.png";
+import { IconEye, IconEyeOff } from "../../components/Icons";
+import { limpiarEstadoRolTemporal } from "../../utils/rolActivo.storage";
 import "./Login.css";
+
+interface LoginLocationState {
+  registroExitoso?: boolean;
+  correoRegistrado?: string;
+}
 
 function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const estadoNavegacion = (location.state as LoginLocationState | null) || null;
 
-  // Estados de los campos
-  const [usuario, setUsuario] = useState("");
+  // Estados de los campos (si viene recién registrado, precargamos el correo)
+  const [usuario, setUsuario] = useState(
+    estadoNavegacion?.correoRegistrado || ""
+  );
   const [password, setPassword] = useState("");
   const [mostrarPassword, setMostrarPassword] = useState(false);
+
+  // Mensaje de confirmación si llega desde Register.tsx
+  const [mensajeRegistro] = useState(
+    estadoNavegacion?.registroExitoso
+      ? "¡Cuenta creada con éxito! Inicia sesión con tus credenciales para continuar."
+      : ""
+  );
 
   // Estados de errores
   const [errorUsuario, setErrorUsuario] = useState("");
@@ -67,6 +85,7 @@ function Login() {
 
       localStorage.setItem("token", token);
       localStorage.setItem("user", JSON.stringify(user));
+      limpiarEstadoRolTemporal();
       navigate("/dashboard", { replace: true });
     } catch (error) {
       console.error(error);
@@ -92,6 +111,13 @@ function Login() {
 
         <h1>Iniciar sesión</h1>
         <p className="auth-subtitle">Ingresa tus credenciales para acceder a tu panel</p>
+
+        {/* Mensaje de confirmación tras registrarse correctamente */}
+        {mensajeRegistro && !apiError && (
+          <div className="auth-success-banner" role="status">
+            ✓ {mensajeRegistro}
+          </div>
+        )}
 
         {/* Mensaje de error de la API (visible y destacado) */}
         {apiError && <div className="auth-error-banner">{apiError}</div>}
@@ -120,6 +146,7 @@ function Login() {
             <button
               type="button"
               onClick={() => setMostrarPassword(!mostrarPassword)}
+              aria-label={mostrarPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
               style={{
                 position: "absolute",
                 right: "12px",
@@ -128,10 +155,14 @@ function Login() {
                 background: "none",
                 border: "none",
                 cursor: "pointer",
-                fontSize: "18px"
+                color: "#94A3B8",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: "4px",
               }}
             >
-              {mostrarPassword ? "👁️" : "🙈"} 
+              {mostrarPassword ? <IconEyeOff size={18} /> : <IconEye size={18} />}
             </button>
           </div>
           {errorPassword && <p className="field-error">{errorPassword}</p>}

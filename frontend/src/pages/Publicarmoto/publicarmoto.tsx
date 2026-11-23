@@ -1,9 +1,12 @@
 // frontend/src/pages/Publicarmoto/publicarmoto.tsx
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
+import { IconAlert, IconCamera, IconCheckCircle, IconClose } from "../../components/Icons";
+import { actualizarGaleriaMoto, API_URL } from "../../services/motos.service";
+import { comprimirImagen } from "../../utils/imagen.utils";
 import "./publicarmoto.css";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
+const MAX_FOTOS_PUBLICAR = 8;
 
 interface MotoFormData {
   brand: string;
@@ -46,7 +49,9 @@ function PublicarMoto() {
     description: "",
   });
 
-  const [fotoBase64, setFotoBase64] = useState<string>("");
+  const [fotosBase64, setFotosBase64] = useState<string[]>([]);
+  const [procesandoFotos, setProcesandoFotos] = useState<boolean>(false);
+  const [avisoGaleria, setAvisoGaleria] = useState<string>("");
   const [errors, setErrors] = useState<FormErrors>({});
   const [apiError, setApiError] = useState<string>("");
   const [cargando, setCargando] = useState<boolean>(false);
@@ -54,19 +59,44 @@ function PublicarMoto() {
 
   const regexPlaca = /^[A-Z]{3}\d{2}[A-Z]{1}$/;
 
-  const handleFotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 3 * 1024 * 1024) {
-        alert("La foto es muy pesada. Selecciona una imagen menor a 3MB.");
-        return;
-      }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFotoBase64(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+  const handleFotosChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const archivos = Array.from(e.target.files ?? []);
+    e.target.value = "";
+    if (archivos.length === 0) return;
+
+    const cupoDisponible = MAX_FOTOS_PUBLICAR - fotosBase64.length;
+    if (cupoDisponible <= 0) {
+      setApiError(`Ya alcanzaste el máximo de ${MAX_FOTOS_PUBLICAR} fotografías por publicación.`);
+      return;
     }
+
+    const seleccionados = archivos.slice(0, cupoDisponible);
+    setProcesandoFotos(true);
+    setApiError("");
+
+    try {
+      const nuevas: string[] = [];
+      for (const file of seleccionados) {
+        if (!file.type.startsWith("image/")) {
+          setApiError("Solo se permiten archivos de imagen (JPG, PNG o WEBP).");
+          continue;
+        }
+        const comprimida = await comprimirImagen(file);
+        nuevas.push(comprimida);
+      }
+
+      if (nuevas.length > 0) {
+        setFotosBase64((prev) => [...prev, ...nuevas].slice(0, MAX_FOTOS_PUBLICAR));
+      }
+    } catch {
+      setApiError("No se pudieron procesar una o más imágenes. Intenta con JPG o PNG.");
+    } finally {
+      setProcesandoFotos(false);
+    }
+  };
+
+  const eliminarFoto = (indice: number) => {
+    setFotosBase64((prev) => prev.filter((_, i) => i !== indice));
   };
 
   const validarCampos = (): boolean => {
@@ -108,6 +138,12 @@ function PublicarMoto() {
     const tarifa = Number(formData.dailyRate);
     if (!formData.dailyRate || isNaN(tarifa) || tarifa <= 0) {
       nuevosErrores.dailyRate = "Ingresa una tarifa diaria válida mayor a 0";
+    }
+
+    const descLimpia = formData.description.trim();
+    if (descLimpia.length > 0 && descLimpia.length < 20) {
+      nuevosErrores.description =
+        "Si escribes una descripción, debe tener al menos 20 caracteres.";
     }
 
     setErrors(nuevosErrores);
@@ -176,9 +212,25 @@ function PublicarMoto() {
         return;
       }
 
-      // Si se guardó en la DB, persistimos la foto localmente para mostrarla en el catálogo
-      if (fotoBase64) {
-        localStorage.setItem(`foto_moto_${placaLimpia}`, fotoBase64);
+      // Si se guardó en la DB, subimos la galería (fotos + descripción) al endpoint real
+      const motoIdCreada = data?.data?.id || data?.id;
+      const descripcionLimpia = formData.description.trim();
+
+      if (fotosBase64[0]) {
+        localStorage.setItem(`foto_moto_${placaLimpia}`, fotosBase64[0]);
+      }
+
+      if (motoIdCreada && (fotosBase64.length > 0 || descripcionLimpia.length >= 20)) {
+        const resGaleria = await actualizarGaleriaMoto(
+          motoIdCreada,
+          fotosBase64,
+          descripcionLimpia || undefined
+        );
+        if (!resGaleria.ok) {
+          setAvisoGaleria(
+            "La motocicleta quedó registrada, pero no se pudo subir la galería completa. Podrás agregarla nuevamente después."
+          );
+        }
       }
 
       setCargando(false);
@@ -195,8 +247,10 @@ function PublicarMoto() {
       <main className="publish-container">
         {publicadoExitoso ? (
           <div className="success-card">
-            <div className="success-icon">🎉</div>
-            <h2>¡Tu moto ha sido registrada con éxito!</h2>
+            <div className="success-icon" style={{ color: "#15803D" }}>
+              <IconCheckCircle size={42} />
+            </div>
+            <h2>Tu motocicleta fue registrada con éxito</h2>
             <p>
               Registramos tu <strong>{formData.brand} {formData.model}</strong> ({formData.licensePlate.toUpperCase()}).
             </p>
@@ -204,7 +258,8 @@ function PublicarMoto() {
               Estado: <span>DISPONIBLE EN CATÁLOGO</span>
             </div>
             <p className="review-info">
-              Los datos se guardaron en la base de datos y ya aparecen en el catálogo.
+              {avisoGaleria ||
+                "Los datos, descripción y galería de fotos se guardaron correctamente y ya aparecen en el catálogo."}
             </p>
             <div className="success-buttons">
               <Link to="/dashboard" className="btn-primary">
@@ -226,8 +281,11 @@ function PublicarMoto() {
             {apiError && (
               <div
                 style={{
-                  backgroundColor: "#FEE2E2",
-                  border: "1px solid #F87171",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "10px",
+                  backgroundColor: "#FEF2F2",
+                  border: "1px solid #FECACA",
                   color: "#991B1B",
                   padding: "12px 16px",
                   borderRadius: "10px",
@@ -235,8 +293,10 @@ function PublicarMoto() {
                   fontSize: "14px",
                   fontWeight: "600",
                 }}
+                role="alert"
               >
-                ⚠️ {apiError}
+                <IconAlert size={18} />
+                <span>{apiError}</span>
               </div>
             )}
 
@@ -437,30 +497,77 @@ function PublicarMoto() {
                 )}
               </div>
 
-              {/* SECCIÓN 3: FOTO */}
+              {/* SECCIÓN 3: DESCRIPCIÓN Y GALERÍA DE FOTOS */}
               <div className="form-section">
-                <h3>3. Foto del vehículo</h3>
-                <div className="form-group full-width">
-                  <label>Foto de la moto para el catálogo</label>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="file-input"
-                    onChange={handleFotoChange}
+                <h3>3. Descripción y galería de fotografías</h3>
+
+                <div className="form-group full-width" style={{ marginBottom: "18px" }}>
+                  <label htmlFor="description">
+                    Descripción para los arrendatarios (opcional, mín. 20 caracteres)
+                  </label>
+                  <textarea
+                    id="description"
+                    name="description"
+                    rows={3}
+                    maxLength={1200}
+                    placeholder="Ej. Moto con mantenimiento reciente en taller oficial, llantas en excelente estado, ideal para trayectos diarios o carretera."
+                    value={formData.description}
+                    onChange={handleChange}
+                    className="publish-textarea"
+                    style={{ borderColor: errors.description ? "#EF4444" : undefined }}
                   />
-                  {fotoBase64 && (
-                    <div style={{ marginTop: "10px" }}>
-                      <img
-                        src={fotoBase64}
-                        alt="Vista previa"
-                        style={{
-                          width: "150px",
-                          height: "95px",
-                          objectFit: "cover",
-                          borderRadius: "8px",
-                          border: "1px solid #E2E8F0",
-                        }}
-                      />
+                  {errors.description && (
+                    <span style={{ color: "#EF4444", fontSize: "12px", marginTop: "4px", fontWeight: "600" }}>
+                      {errors.description}
+                    </span>
+                  )}
+                </div>
+
+                <div className="form-group full-width">
+                  <label htmlFor="fotosMoto">
+                    Fotografías del vehículo ({fotosBase64.length}/{MAX_FOTOS_PUBLICAR} — la primera será la portada)
+                  </label>
+                  <label htmlFor="fotosMoto" className="publish-upload-trigger">
+                    <IconCamera size={18} />
+                    <span>
+                      {procesandoFotos
+                        ? "Optimizando fotografías..."
+                        : fotosBase64.length >= MAX_FOTOS_PUBLICAR
+                        ? "Límite de 8 fotos alcanzado"
+                        : "Seleccionar fotografías (hasta 8 en JPG, PNG o WEBP)"}
+                    </span>
+                  </label>
+                  <input
+                    id="fotosMoto"
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    multiple
+                    disabled={procesandoFotos || fotosBase64.length >= MAX_FOTOS_PUBLICAR}
+                    className="publish-file-hidden"
+                    onChange={handleFotosChange}
+                  />
+                  <small className="input-hint">
+                    Sube varios ángulos (frontal, laterales, tablero). Tras cada renta, la galería se actualizará con las fotos de inspección.
+                  </small>
+
+                  {fotosBase64.length > 0 && (
+                    <div className="publish-photos-grid">
+                      {fotosBase64.map((src, indice) => (
+                        <div key={indice} className="publish-photo-item">
+                          <img src={src} alt={`Vista previa ${indice + 1}`} />
+                          {indice === 0 && (
+                            <span className="publish-cover-badge">Portada</span>
+                          )}
+                          <button
+                            type="button"
+                            className="publish-remove-photo"
+                            aria-label={`Quitar foto ${indice + 1}`}
+                            onClick={() => eliminarFoto(indice)}
+                          >
+                            <IconClose size={14} />
+                          </button>
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>

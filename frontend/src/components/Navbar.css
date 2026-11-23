@@ -39,29 +39,73 @@
 }
 
 .navbar-links a {
-  color: #4A5568;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #475569;
   text-decoration: none;
   font-size: 14px;
   font-weight: 600;
-  transition: color 0.2s ease;
+  padding: 6px 2px;
+  border-bottom: 2px solid transparent;
+  transition: color 0.2s ease, border-color 0.2s ease;
 }
 
 .navbar-links a:hover,
 .navbar-links a.active {
-  color: #FF6A3D;
+  color: #0F2537;
+  border-bottom-color: #FF6A3D;
 }
 
-/* Botón especial para publicar moto */
+/* Botón especial sobrio para publicar moto (solo visible para Propietarios) */
 .nav-btn-publish {
-  background-color: rgba(255, 106, 61, 0.12);
-  color: #FF6A3D !important;
-  padding: 8px 14px;
+  background-color: #0F2537;
+  color: #FFFFFF !important;
+  padding: 8px 14px !important;
   border-radius: 8px;
+  border-bottom: none !important;
 }
 
-.nav-btn-publish:hover {
-  background-color: #FF6A3D;
+.nav-btn-publish:hover,
+.nav-btn-publish.active {
+  background-color: #163752;
   color: #FFFFFF !important;
+}
+
+/* Insignia discreta del rol activo en la Navbar */
+.navbar-role-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  border: 1px solid transparent;
+}
+
+.navbar-role-pill--user {
+  background-color: #F1F5F9;
+  border-color: #CBD5E1;
+  color: #334155;
+}
+
+.navbar-role-pill--renter {
+  background-color: #ECFDF5;
+  border-color: #A7F3D0;
+  color: #065F46;
+}
+
+.navbar-role-pill--owner {
+  background-color: #FFF7ED;
+  border-color: #FED7AA;
+  color: #9A3412;
+}
+
+.navbar-role-pill--admin {
+  background-color: #EEF2FF;
+  border-color: #C7D2FE;
+  color: #3730A3;
 }
 
 /* LADO DERECHO */
@@ -81,10 +125,10 @@
 .icon-button {
   background: #F8FAFC;
   border: 1px solid #E2E8F0;
+  color: #334155;
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  font-size: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -227,7 +271,7 @@
 
 /* Menú de Perfil */
 .profile-dropdown {
-  width: 240px;
+  width: 268px;
   padding: 12px 0;
 }
 
@@ -238,9 +282,14 @@
   padding: 4px 16px 12px;
 }
 
+.profile-dropdown-meta {
+  min-width: 0;
+}
+
 .avatar-small {
   width: 36px;
   height: 36px;
+  flex-shrink: 0;
   background-color: #0F2537;
   color: #FFFFFF;
   border-radius: 50%;
@@ -255,11 +304,17 @@
   font-size: 13px;
   font-weight: 700;
   color: #0F2537;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .profile-role {
-  font-size: 11px;
-  color: #718096;
+  font-size: 11.5px;
+  color: #64748B;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .dropdown-divider {
@@ -269,22 +324,34 @@
 }
 
 .dropdown-link {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 10px;
   width: 100%;
   text-align: left;
   padding: 10px 16px;
   font-size: 13px;
   font-weight: 600;
-  color: #2D3748;
+  color: #334155;
   text-decoration: none;
   background: none;
   border: none;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: background 0.15s, color 0.15s;
 }
 
 .dropdown-link:hover {
   background-color: #F8FAFC;
+  color: #0F2537;
+}
+
+.dropdown-link--switch {
+  color: #0F2537;
+  background-color: #F8FAFC;
+}
+
+.dropdown-link--switch:hover {
+  background-color: #F1F5F9;
   color: #FF6A3D;
 }
 

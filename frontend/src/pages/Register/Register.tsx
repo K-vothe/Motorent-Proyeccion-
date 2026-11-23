@@ -117,9 +117,29 @@ function Register() {
         return;
       }
 
-      localStorage.setItem("token", data.token);
-      localStorage.setItem("user", JSON.stringify(data.user));
-      navigate("/motos", { replace: true });
+      const token = data.data?.token || data.token;
+      const user = data.data?.user || data.user || data.data;
+
+      // Solo guardamos sesión si el backend realmente entregó un JWT válido.
+      // Actualmente POST /auth/register crea la cuenta sin devolver token,
+      // así que redirigimos a /login con un mensaje de confirmación para evitar
+      // guardar "undefined" en localStorage.
+      if (typeof token === "string" && token.trim() !== "") {
+        localStorage.setItem("token", token);
+        if (user) {
+          localStorage.setItem("user", JSON.stringify(user));
+        }
+        navigate("/dashboard", { replace: true });
+        return;
+      }
+
+      navigate("/login", {
+        replace: true,
+        state: {
+          registroExitoso: true,
+          correoRegistrado: correo.trim(),
+        },
+      });
     } catch (error) {
       console.error(error);
       setApiError("No se pudo conectar con el servidor backend.");

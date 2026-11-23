@@ -57,6 +57,10 @@ export const findUserByIdentifier = async (identifier: string) => {
         { email: identifier },
       ],
     },
+    include: {
+      renter: true,
+      owner: true,
+    },
   });
 };
 
@@ -67,7 +71,7 @@ export const findUserById = async (userId: string) => {
       id: userId,
     },
     include: {
-      client: true,
+      renter: true,
       owner: true,
     },
   });

@@ -1,0 +1,448 @@
+/* frontend/src/styles/dark-mode.css
+ *
+ * Hoja de estilos dedicada exclusivamente al Modo Oscuro (Material Design 3).
+ *
+ * ¿Por qué agrupar estas reglas aquí?
+ * Permite activar un modo oscuro consistente en TODA la plataforma sin tener
+ * que reescribir cada CSS histórico de fases anteriores, facilitando el estudio
+ * y mantenimiento del sistema de diseño.
+ *
+ * Jerarquía tonal (de más profundo a más elevado):
+ *   Fondo base:       #0B141D (--bg-main)
+ *   Tarjetas:         #111E2B (--bg-surface)
+ *   Controles/Hover:  #18293A (--bg-elevated)
+ *   Bordes sutiles:   #243648 (--border-color)
+ */
+
+/* 1. SUPERFICIES PRINCIPALES DE PÁGINA */
+:root[data-theme="dark"] .dashboard,
+:root[data-theme="dark"] .motos-page,
+:root[data-theme="dark"] .perfil-page,
+:root[data-theme="dark"] .rentas-page,
+:root[data-theme="dark"] .publish-page,
+:root[data-theme="dark"] .role-gate-page,
+:root[data-theme="dark"] .renter-page,
+:root[data-theme="dark"] .owner-page,
+:root[data-theme="dark"] .config-page {
+  background-color: var(--bg-main);
+  color: var(--text-main);
+}
+
+/* 2. NAVBAR Y MENÚS DESPLEGABLES */
+:root[data-theme="dark"] .global-navbar {
+  background-color: #0E1924;
+  border-bottom-color: var(--border-color);
+}
+
+:root[data-theme="dark"] .navbar-logo {
+  color: var(--text-main);
+}
+
+:root[data-theme="dark"] .navbar-links a {
+  color: var(--text-muted);
+}
+
+:root[data-theme="dark"] .navbar-links a:hover,
+:root[data-theme="dark"] .navbar-links a.active {
+  color: var(--text-main);
+}
+
+:root[data-theme="dark"] .nav-btn-publish {
+  background-color: var(--accent);
+  color: #FFFFFF !important;
+}
+
+:root[data-theme="dark"] .nav-btn-publish:hover {
+  background-color: var(--accent-hover);
+}
+
+:root[data-theme="dark"] .icon-button {
+  background-color: var(--bg-elevated);
+  border-color: var(--border-color);
+  color: var(--text-body);
+}
+
+:root[data-theme="dark"] .icon-button:hover {
+  background-color: #20354A;
+  border-color: var(--border-strong);
+}
+
+:root[data-theme="dark"] .avatar-button,
+:root[data-theme="dark"] .avatar-small {
+  background-color: #1E3A54;
+  border-color: var(--border-strong);
+  color: #FFFFFF;
+}
+
+:root[data-theme="dark"] .dropdown-menu {
+  background-color: #142333;
+  border-color: var(--border-strong);
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.5);
+}
+
+:root[data-theme="dark"] .dropdown-header,
+:root[data-theme="dark"] .dropdown-divider {
+  border-color: var(--border-color);
+  background-color: transparent;
+}
+
+:root[data-theme="dark"] .dropdown-divider {
+  background-color: var(--border-color);
+}
+
+:root[data-theme="dark"] .dropdown-header h4,
+:root[data-theme="dark"] .profile-name,
+:root[data-theme="dark"] .notif-title {
+  color: var(--text-main);
+}
+
+:root[data-theme="dark"] .profile-role,
+:root[data-theme="dark"] .notif-desc,
+:root[data-theme="dark"] .notif-time {
+  color: var(--text-muted);
+}
+
+:root[data-theme="dark"] .notif-item {
+  border-bottom-color: var(--border-color);
+}
+
+:root[data-theme="dark"] .notif-item:hover,
+:root[data-theme="dark"] .dropdown-link:hover {
+  background-color: var(--bg-elevated);
+  color: var(--text-main);
+}
+
+:root[data-theme="dark"] .notif-item.unread {
+  background-color: rgba(255, 129, 89, 0.1);
+}
+
+:root[data-theme="dark"] .dropdown-link {
+  color: var(--text-body);
+}
+
+:root[data-theme="dark"] .dropdown-link--switch {
+  background-color: var(--bg-elevated);
+  color: var(--text-main);
+}
+
+:root[data-theme="dark"] .logout-link:hover {
+  background-color: rgba(220, 38, 38, 0.15) !important;
+}
+
+:root[data-theme="dark"] .btn-nav-login {
+  color: var(--text-main);
+}
+
+:root[data-theme="dark"] .navbar-role-pill--user {
+  background-color: #1E2D3D;
+  border-color: #334A61;
+  color: #CBD5E1;
+}
+
+:root[data-theme="dark"] .navbar-role-pill--renter {
+  background-color: rgba(16, 185, 129, 0.14);
+  border-color: rgba(52, 211, 153, 0.35);
+  color: #6EE7B7;
+}
+
+:root[data-theme="dark"] .navbar-role-pill--owner {
+  background-color: rgba(255, 129, 89, 0.14);
+  border-color: rgba(255, 129, 89, 0.35);
+  color: #FDBA74;
+}
+
+:root[data-theme="dark"] .navbar-role-pill--admin {
+  background-color: rgba(129, 140, 248, 0.16);
+  border-color: rgba(165, 180, 252, 0.35);
+  color: #C7D2FE;
+}
+
+/* 3. TARJETAS, MODALES Y CONTENEDORES GENERALES */
+:root[data-theme="dark"] .stat-card,
+:root[data-theme="dark"] .action-card,
+:root[data-theme="dark"] .role-onboarding-card,
+:root[data-theme="dark"] .owner-promo-card,
+:root[data-theme="dark"] .empty-rental-banner,
+:root[data-theme="dark"] .secondary-role-banner,
+:root[data-theme="dark"] .admin-request-card,
+:root[data-theme="dark"] .admin-empty-queue,
+:root[data-theme="dark"] .dual-role-switch,
+:root[data-theme="dark"] .admin-tabs,
+:root[data-theme="dark"] .mc-card,
+:root[data-theme="dark"] .md-dialog,
+:root[data-theme="dark"] .md-booking,
+:root[data-theme="dark"] .perfil-header-box,
+:root[data-theme="dark"] .perfil-card,
+:root[data-theme="dark"] .rentas-row,
+:root[data-theme="dark"] .rentas-demo-notice,
+:root[data-theme="dark"] .publish-card,
+:root[data-theme="dark"] .success-card,
+:root[data-theme="dark"] .role-gate-card,
+:root[data-theme="dark"] .renter-card,
+:root[data-theme="dark"] .owner-card,
+:root[data-theme="dark"] .config-card,
+:root[data-theme="dark"] .config-sidebar,
+:root[data-theme="dark"] .motos-toolbar {
+  background-color: var(--bg-surface);
+  border-color: var(--border-color);
+  color: var(--text-main);
+}
+
+:root[data-theme="dark"] .stat-card.highlight {
+  background-color: rgba(22, 163, 74, 0.12);
+  border-color: rgba(74, 222, 128, 0.35);
+}
+
+:root[data-theme="dark"] .stat-card.highlight .stat-number {
+  color: #4ADE80;
+}
+
+:root[data-theme="dark"] .dev-role-bar,
+:root[data-theme="dark"] .admin-notice-banner,
+:root[data-theme="dark"] .admin-request-grid,
+:root[data-theme="dark"] .perfil-dato,
+:root[data-theme="dark"] .md-specs div,
+:root[data-theme="dark"] .md-inspection,
+:root[data-theme="dark"] .md-owner-text,
+:root[data-theme="dark"] .mc-specs li,
+:root[data-theme="dark"] .mg-filters,
+:root[data-theme="dark"] .earnings-preview,
+:root[data-theme="dark"] .publish-upload-trigger,
+:root[data-theme="dark"] .config-option-row {
+  background-color: var(--bg-elevated);
+  border-color: var(--border-color);
+}
+
+/* 4. TEXTOS Y TÍTULOS EN MODO OSCURO */
+:root[data-theme="dark"] .welcome-banner h1,
+:root[data-theme="dark"] .section-title-box h2,
+:root[data-theme="dark"] .stat-number,
+:root[data-theme="dark"] .action-card h3,
+:root[data-theme="dark"] .role-onboarding-card h3,
+:root[data-theme="dark"] .owner-promo-text h3,
+:root[data-theme="dark"] .empty-rental-banner h3,
+:root[data-theme="dark"] .secondary-role-banner strong,
+:root[data-theme="dark"] .admin-notice-banner strong,
+:root[data-theme="dark"] .admin-request-top h3,
+:root[data-theme="dark"] .admin-request-grid strong,
+:root[data-theme="dark"] .admin-empty-queue strong,
+:root[data-theme="dark"] .motos-heading h1,
+:root[data-theme="dark"] .mc-title-row h3,
+:root[data-theme="dark"] .mc-price,
+:root[data-theme="dark"] .md-header h2,
+:root[data-theme="dark"] .md-section h3,
+:root[data-theme="dark"] .md-specs dd,
+:root[data-theme="dark"] .md-price,
+:root[data-theme="dark"] .md-summary-total,
+:root[data-theme="dark"] .perfil-header-box h1,
+:root[data-theme="dark"] .perfil-card h2,
+:root[data-theme="dark"] .perfil-dato-valor,
+:root[data-theme="dark"] .rentas-content h1,
+:root[data-theme="dark"] .rentas-subtitle,
+:root[data-theme="dark"] .rentas-row-moto,
+:root[data-theme="dark"] .rentas-row-total,
+:root[data-theme="dark"] .publish-header h1,
+:root[data-theme="dark"] .form-section h3,
+:root[data-theme="dark"] .success-card h2,
+:root[data-theme="dark"] .role-gate-card h1,
+:root[data-theme="dark"] .config-header h1,
+:root[data-theme="dark"] .config-card h2 {
+  color: var(--text-main);
+}
+
+:root[data-theme="dark"] .welcome-description,
+:root[data-theme="dark"] .section-title-box p,
+:root[data-theme="dark"] .stat-label,
+:root[data-theme="dark"] .action-card p,
+:root[data-theme="dark"] .role-card-desc,
+:root[data-theme="dark"] .owner-promo-text p,
+:root[data-theme="dark"] .empty-rental-banner p,
+:root[data-theme="dark"] .secondary-role-banner p,
+:root[data-theme="dark"] .admin-notice-banner p,
+:root[data-theme="dark"] .admin-request-meta,
+:root[data-theme="dark"] .motos-heading p,
+:root[data-theme="dark"] .mc-subtitle,
+:root[data-theme="dark"] .mc-year,
+:root[data-theme="dark"] .mc-specs li,
+:root[data-theme="dark"] .md-resumen,
+:root[data-theme="dark"] .md-section p,
+:root[data-theme="dark"] .md-highlights li,
+:root[data-theme="dark"] .md-summary,
+:root[data-theme="dark"] .perfil-card-subtitle,
+:root[data-theme="dark"] .user-email,
+:root[data-theme="dark"] .rentas-lead,
+:root[data-theme="dark"] .rentas-row-fechas,
+:root[data-theme="dark"] .rentas-demo-notice,
+:root[data-theme="dark"] .role-gate-desc,
+:root[data-theme="dark"] .config-subtitle,
+:root[data-theme="dark"] .config-option-desc {
+  color: var(--text-body);
+}
+
+/* 5. INPUTS, SELECTS, BOTONES SECUNDARIOS Y CHIPS */
+:root[data-theme="dark"] .motos-search-field {
+  background-color: #0E1924;
+  border-color: var(--border-strong);
+  color: var(--text-muted);
+}
+
+:root[data-theme="dark"] .motos-search-field input {
+  background-color: transparent !important;
+  border: none !important;
+  color: var(--text-main) !important;
+}
+
+:root[data-theme="dark"] input[type="text"],
+:root[data-theme="dark"] input[type="number"],
+:root[data-theme="dark"] input[type="email"],
+:root[data-theme="dark"] input[type="password"],
+:root[data-theme="dark"] input[type="date"],
+:root[data-theme="dark"] select,
+:root[data-theme="dark"] textarea {
+  background-color: #0E1924 !important;
+  border-color: var(--border-strong) !important;
+  color: var(--text-main) !important;
+}
+
+:root[data-theme="dark"] input::placeholder,
+:root[data-theme="dark"] textarea::placeholder {
+  color: #7E93A8;
+}
+
+/* Tipografías y cajas de formularios (Verificación, Publicar Moto, Perfil, Modales) */
+:root[data-theme="dark"] label,
+:root[data-theme="dark"] .form-group label,
+:root[data-theme="dark"] .owner-form-group label,
+:root[data-theme="dark"] .md-field,
+:root[data-theme="dark"] .admin-reject-box label,
+:root[data-theme="dark"] .renter-header h1,
+:root[data-theme="dark"] .owner-header h1,
+:root[data-theme="dark"] .section-heading h2,
+:root[data-theme="dark"] .owner-section-heading h2,
+:root[data-theme="dark"] .step-item span,
+:root[data-theme="dark"] .owner-step-item span,
+:root[data-theme="dark"] .renter-summary-box strong,
+:root[data-theme="dark"] .owner-summary-box strong,
+:root[data-theme="dark"] .upload-box-title,
+:root[data-theme="dark"] .upload-file-name,
+:root[data-theme="dark"] .info-box strong,
+:root[data-theme="dark"] .owner-info-box strong,
+:root[data-theme="dark"] .verification-box strong,
+:root[data-theme="dark"] .owner-verification-box strong {
+  color: var(--text-main);
+}
+
+:root[data-theme="dark"] .renter-header p,
+:root[data-theme="dark"] .owner-header p,
+:root[data-theme="dark"] .section-heading p,
+:root[data-theme="dark"] .owner-section-heading p,
+:root[data-theme="dark"] .publish-header p,
+:root[data-theme="dark"] .input-hint,
+:root[data-theme="dark"] .upload-box-desc,
+:root[data-theme="dark"] .upload-box-formats,
+:root[data-theme="dark"] .upload-file-size,
+:root[data-theme="dark"] .info-box p,
+:root[data-theme="dark"] .owner-info-box p,
+:root[data-theme="dark"] .verification-box p,
+:root[data-theme="dark"] .owner-verification-box p,
+:root[data-theme="dark"] .renter-summary-box span,
+:root[data-theme="dark"] .owner-summary-box span,
+:root[data-theme="dark"] .earnings-row,
+:root[data-theme="dark"] .review-info {
+  color: var(--text-body);
+}
+
+:root[data-theme="dark"] .upload-box,
+:root[data-theme="dark"] .info-box,
+:root[data-theme="dark"] .owner-info-box,
+:root[data-theme="dark"] .verification-box,
+:root[data-theme="dark"] .owner-verification-box,
+:root[data-theme="dark"] .renter-summary-box,
+:root[data-theme="dark"] .owner-summary-box,
+:root[data-theme="dark"] .perfil-publico-card,
+:root[data-theme="dark"] .resena-item-card,
+:root[data-theme="dark"] .rentas-eval-card {
+  background-color: var(--bg-elevated);
+  border-color: var(--border-color);
+  color: var(--text-main);
+}
+
+:root[data-theme="dark"] .back-button,
+:root[data-theme="dark"] .owner-back-button,
+:root[data-theme="dark"] .btn-secondary {
+  background-color: var(--bg-elevated);
+  border-color: var(--border-strong);
+  color: var(--text-main);
+}
+
+:root[data-theme="dark"] .filter-chip,
+:root[data-theme="dark"] .tab-btn,
+:root[data-theme="dark"] .dev-role-btn,
+:root[data-theme="dark"] .admin-refresh-btn,
+:root[data-theme="dark"] .admin-btn-secondary,
+:root[data-theme="dark"] .md-close,
+:root[data-theme="dark"] .perfil-outline-btn,
+:root[data-theme="dark"] .role-gate-btn-secondary,
+:root[data-theme="dark"] .rentas-cta-link,
+:root[data-theme="dark"] .motos-page-btn {
+  background-color: var(--bg-elevated);
+  border-color: var(--border-strong);
+  color: var(--text-body);
+}
+
+:root[data-theme="dark"] .filter-chip.active,
+:root[data-theme="dark"] .tab-btn.active,
+:root[data-theme="dark"] .dev-role-btn.active,
+:root[data-theme="dark"] .dual-switch-btn.active,
+:root[data-theme="dark"] .admin-tab-btn.active,
+:root[data-theme="dark"] .motos-page-btn.active,
+:root[data-theme="dark"] .mc-button,
+:root[data-theme="dark"] .btn-promo-publish,
+:root[data-theme="dark"] .perfil-primary-btn,
+:root[data-theme="dark"] .role-gate-btn-primary,
+:root[data-theme="dark"] .admin-btn-approve {
+  background-color: var(--accent);
+  border-color: var(--accent);
+  color: #FFFFFF;
+}
+
+:root[data-theme="dark"] .dual-switch-btn,
+:root[data-theme="dark"] .admin-tab-btn,
+:root[data-theme="dark"] .mg-filter {
+  color: var(--text-muted);
+}
+
+:root[data-theme="dark"] .mg-filter.active {
+  background-color: var(--bg-surface);
+  color: var(--text-main);
+}
+
+:root[data-theme="dark"] .count-badge,
+:root[data-theme="dark"] .md-tag,
+:root[data-theme="dark"] .role-gate-tag {
+  background-color: var(--bg-elevated);
+  color: var(--text-body);
+}
+
+:root[data-theme="dark"] .icon-chip--primary,
+:root[data-theme="dark"] .icon-chip--neutral,
+:root[data-theme="dark"] .role-gate-icon {
+  background-color: #1D3349;
+  color: #E2E8F0;
+}
+
+:root[data-theme="dark"] .icon-chip--accent {
+  background-color: rgba(255, 129, 89, 0.16);
+  color: #FF8159;
+}
+
+:root[data-theme="dark"] .icon-chip--success {
+  background-color: rgba(34, 197, 94, 0.16);
+  color: #4ADE80;
+}
+
+:root[data-theme="dark"] .mc-footer,
+:root[data-theme="dark"] .md-header,
+:root[data-theme="dark"] .md-summary {
+  border-color: var(--border-color);
+}

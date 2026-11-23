@@ -1,24 +1,30 @@
 /* frontend/src/index.css */
+/* ========================================================================== */
+/* TOKENS SEMÁNTICOS DE COLOR (CLARO Y OSCURO — MATERIAL DESIGN 3)            */
+/* ========================================================================== */
 :root {
   /* Marca Principal */
-  --primary: #0F2537;          /* Azul Petróleo para cabeceras y botones serios */
+  --primary: #0F2537;          /* Azul petróleo corporativo */
   --primary-hover: #163752;
-  --accent: #FF6A3D;           /* Naranja eléctrico para botones de acción (CTA) */
+  --accent: #FF6A3D;           /* Naranja de acción (CTA) */
   --accent-hover: #E5541F;
 
   /* Categorías de motos */
-  --tag-travel: #2E7D32;       /* Verde para Viaje */
-  --tag-daily: #0288D1;        /* Azul para Uso Diario */
-  --tag-work: #455A64;         /* Gris para Trabajo */
+  --tag-travel: #2E7D32;
+  --tag-daily: #0288D1;
+  --tag-work: #455A64;
 
-  /* Superficies y Fondos */
-  --bg-main: #F4F7F6;          /* Fondo suave de la app */
-  --bg-surface: #FFFFFF;       /* Fondo de tarjetas y modales */
-  --border-color: #E2E8F0;     /* Bordes sutiles */
+  /* Superficies y Fondos (Tema Claro) */
+  --bg-main: #F4F7F6;
+  --bg-surface: #FFFFFF;
+  --bg-elevated: #F8FAFC;
+  --border-color: #E2E8F0;
+  --border-strong: #CBD5E1;
 
-  /* Textos */
-  --text-main: #1A202C;        /* Texto principal */
-  --text-muted: #718096;       /* Subtítulos y detalles */
+  /* Textos (Contraste WCAG AA >= 4.5:1) */
+  --text-main: #0F2537;
+  --text-body: #334155;
+  --text-muted: #64748B;
 
   /* Sombras y radios */
   --radius-sm: 6px;
@@ -26,6 +32,31 @@
   --radius-lg: 16px;
   --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
   --shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* Tema Oscuro basado en Material Design 3:
+ * - Se evita negro puro (#000000) para conservar jerarquía visual y descanso ocular.
+ * - Las superficies elevadas usan tonos ligeramente más claros (#111E2B -> #18293A).
+ * - El color de acento se desatura suavemente (#FF8159) para no vibrar sobre fondo oscuro.
+ */
+:root[data-theme="dark"] {
+  --primary: #E2E8F0;
+  --primary-hover: #FFFFFF;
+  --accent: #FF8159;
+  --accent-hover: #FF6A3D;
+
+  --bg-main: #0B141D;
+  --bg-surface: #111E2B;
+  --bg-elevated: #18293A;
+  --border-color: #243648;
+  --border-strong: #334A61;
+
+  --text-main: #F1F5F9;
+  --text-body: #CBD5E1;
+  --text-muted: #94A3B8;
+
+  --shadow-card: 0 4px 12px rgba(0, 0, 0, 0.35);
+  --shadow-hover: 0 12px 24px rgba(0, 0, 0, 0.48);
 }
 
 * {
@@ -39,4 +70,5 @@ body {
   background-color: var(--bg-main);
   color: var(--text-main);
   -webkit-font-smoothing: antialiased;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }

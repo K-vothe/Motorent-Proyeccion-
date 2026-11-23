@@ -15,10 +15,11 @@ test("createMoto responde 201 cuando el registro es exitoso", async () => {
   // mockFindFirst simula que la placa NO existe previamente (retorna null).
   const mockFindFirst = mock.fn(async () => null);
 
-  // mockFindOwner simula que el usuario ya cuenta con un perfil de Owner registrado.
+  // mockFindOwner simula que el usuario ya cuenta con un perfil de Owner aprobado.
   const mockFindOwner = mock.fn(async () => ({
     id: "owner-uuid-456",
-    userId: "user-123",
+    idUser: "user-123",
+    estadoVerificacion: "APPROVED",
   }));
 
   // mockCreateMoto intercepta la escritura en PostgreSQL y devuelve el objeto simulado con su id generado.
@@ -126,6 +127,67 @@ test("createMoto responde 201 cuando el registro es exitoso", async () => {
 
   } finally {
     // 5. Limpieza y restauración para evitar efectos colaterales entre pruebas
+    prisma.moto.findFirst = originalFindFirst;
+    prisma.owner.findUnique = originalFindUniqueOwner;
+    prisma.moto.create = originalCreateMoto;
+    await prisma.$disconnect();
+  }
+});
+
+test("createMoto responde 400 cuando el usuario no tiene perfil Owner aprobado", async () => {
+  const originalFindFirst = prisma.moto.findFirst;
+  const originalFindUniqueOwner = prisma.owner.findUnique;
+  const originalCreateMoto = prisma.moto.create;
+
+  const mockFindFirst = mock.fn(async () => null);
+  const mockFindOwner = mock.fn(async () => ({
+    id: "owner-uuid-pendiente",
+    idUser: "user-123",
+    estadoVerificacion: "PENDING",
+  }));
+  const mockCreateMoto = mock.fn(async () => ({}));
+
+  prisma.moto.findFirst = mockFindFirst as any;
+  prisma.owner.findUnique = mockFindOwner as any;
+  prisma.moto.create = mockCreateMoto as any;
+
+  try {
+    const req: any = {
+      usuario: { id: "user-123", role: "OWNER" },
+      body: {
+        brand: "Yamaha",
+        model: "MT-03",
+        year: 2022,
+        licensePlate: "XYZ99K",
+        dailyRate: 150000,
+        displacement: 321,
+        color: "Negro",
+        KM: 12000,
+      },
+    };
+
+    const res: any = {
+      statusCode: 0,
+      body: null,
+      status(code: number) {
+        this.statusCode = code;
+        return this;
+      },
+      json(payload: any) {
+        this.body = payload;
+        return this;
+      },
+    };
+
+    await createMoto(req, res);
+
+    assert.strictEqual(res.statusCode, 400);
+    assert.match(
+      String(res.body?.mensaje),
+      /verificación de propietario/i
+    );
+    assert.strictEqual(mockCreateMoto.mock.calls.length, 0);
+  } finally {
     prisma.moto.findFirst = originalFindFirst;
     prisma.owner.findUnique = originalFindUniqueOwner;
     prisma.moto.create = originalCreateMoto;
