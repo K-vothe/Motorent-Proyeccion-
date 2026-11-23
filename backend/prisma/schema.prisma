@@ -43,13 +43,18 @@ enum MotoStatus {
   MAINTENANCE
   INACTIVE
   REJECTED
+  STOLEN
+  ACCIDENTED
+  MISSING
 }
 
 enum RentalStatus {
   PENDING
+  PAID
   ACTIVE
   COMPLETED
   CANCELLED
+  INCIDENT
 }
 
 enum ContractStatus {
@@ -61,6 +66,19 @@ enum ContractStatus {
 enum HandoverType {
   PICKUP
   RETURN
+}
+
+enum IncidentType {
+  THEFT
+  ACCIDENT
+  DISAPPEARANCE
+}
+
+enum LegalDocType {
+  TRANSIT_LICENSE
+  SOAT
+  TECHNICAL_REVIEW
+  INSURANCE
 }
 
 enum ReviewTargetType {
@@ -118,13 +136,20 @@ model Renter {
   photo              String
 
   // Driving license
-  licenseNumber      String   @unique
-  licenseFrontUrl    String
-  licenseBackUrl     String
-  licenseCategory    String
+  licenseNumber         String    @unique
+  licenseFrontUrl       String
+  licenseBackUrl        String
+  licenseCategory       String
+  licenseExpirationDate DateTime?
 
   // Proof of address
-  billUrl            String
+  billUrl               String
+
+  // Optional AES-256-GCM encrypted binary blobs (modulo documento)
+  documentFrontEnc      Bytes?
+  documentBackEnc       Bytes?
+  licenseFrontEnc       Bytes?
+  licenseBackEnc        Bytes?
 
   // Verification
   estadoVerificacion RenterVerificationStatus @default(PENDING)
@@ -192,9 +217,11 @@ model Moto {
   dailyRate     Decimal     @db.Decimal(10, 2)
   status        MotoStatus  @default(AVAILABLE)
 
-  document      MotoDocument?
-  rentals       Rental[]
-  reviews       Review[]
+  document       MotoDocument?
+  legalDocuments MotoLegalDocument[]
+  images         MotoImage[]
+  rentals        Rental[]
+  reviews        Review[]
 
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
@@ -237,10 +264,17 @@ model Rental {
 
   status        RentalStatus @default(PENDING)
 
-  renter        Renter      @relation(fields: [renterId], references: [id])
+  // Incidentes reportados durante la renta (Fase 9)
+  incidentType  IncidentType?
+  incidentNotes String?
+  incidentAt    DateTime?
+
+  renter        Renter       @relation(fields: [renterId], references: [id])
   moto          Moto         @relation(fields: [motoId], references: [id])
 
   contract      Contract?
+  clauses       RentalClause[]
+  payment       Payment?
   handovers     VehicleHandover[]
   reviews       Review[]
 
@@ -257,11 +291,87 @@ model Contract {
   accepted       Boolean        @default(false)
   acceptedAt     DateTime?
   observations   String?
+  signatureEnc   Bytes?
+  signedAt       DateTime?
+  signedIp       String?
+  documentHash   String?
 
   rental     Rental   @relation(fields: [rentalId], references: [id])
 
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+}
+
+model Clause {
+  id        String   @id @default(uuid())
+  title     String
+  body      String
+  version   Int      @default(1)
+  active    Boolean  @default(true)
+
+  rentalClauses RentalClause[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model RentalClause {
+  id            String   @id @default(uuid())
+  rentalId      String
+  clauseId      String
+  clauseVersion Int
+  bodySnapshot  String
+
+  rental        Rental   @relation(fields: [rentalId], references: [id])
+  clause        Clause   @relation(fields: [clauseId], references: [id])
+
+  createdAt     DateTime @default(now())
+
+  @@unique([rentalId, clauseId])
+}
+
+model Payment {
+  id        String    @id @default(uuid())
+  rentalId  String    @unique
+  amount    Decimal   @db.Decimal(10, 2)
+  method    String
+  reference String    @unique
+  status    String    @default("APPROVED")
+  paidAt    DateTime  @default(now())
+
+  rental    Rental    @relation(fields: [rentalId], references: [id])
+
+  createdAt DateTime  @default(now())
+}
+
+model MotoLegalDocument {
+  id                 String             @id @default(uuid())
+  motoId             String
+  type               LegalDocType
+  number             String?
+  expiresAt          DateTime?
+  fileEnc            Bytes
+  verificationStatus VerificationStatus @default(PENDING)
+  verifiedAt         DateTime?
+
+  moto               Moto               @relation(fields: [motoId], references: [id])
+
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  @@unique([motoId, type])
+}
+
+model MotoImage {
+  id        String   @id @default(uuid())
+  motoId    String
+  data      Bytes
+  mime      String
+  isPrimary Boolean  @default(false)
+
+  moto      Moto     @relation(fields: [motoId], references: [id])
+
+  createdAt DateTime @default(now())
 }
 
 model VehicleHandover {

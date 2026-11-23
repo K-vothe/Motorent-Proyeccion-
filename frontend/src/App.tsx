@@ -52,7 +52,7 @@ function App() {
           <Route
             element={
               <RoleRoute
-                rolesPermitidos={["RENTER", "ADMIN"]}
+                rolesPermitidos={["RENTER", "OWNER", "ADMIN"]}
                 tipoRequerido="renter"
               />
             }

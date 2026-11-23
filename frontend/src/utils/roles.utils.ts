@@ -251,6 +251,7 @@ export function obtenerNavegacionPorRol(
       enlacesPrincipales: [
         { label: "Mi Panel", to: "/dashboard" },
         { label: "Catálogo", to: "/motos" },
+        { label: "Rentas", to: "/rentas" },
         { label: "Publicar moto", to: "/publicarmoto", destacado: true },
       ],
       enlacesMenuPerfil: enlacesPerfil,

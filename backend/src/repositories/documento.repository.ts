@@ -2,27 +2,42 @@ import { prisma } from "../config/prisma.js";
 
 type TipoLegal = "TRANSIT_LICENSE" | "SOAT" | "TECHNICAL_REVIEW" | "INSURANCE";
 
-// ===== CLIENTE ===== //
+// ===== ARRENDATARIO (RENTER) ===== //
 export const buscarClientePorUserId = async (userId: string) =>
-  prisma.client.findUnique({ where: { userId } });
+  prisma.renter.findUnique({ where: { idUser: userId } });
 
-export const upsertCliente = async (userId: string, data: any) =>
-  prisma.client.upsert({
-    where: { userId },
-    create: { userId, ...data },
-    // al re-subir documentos, vuelve a quedar pendiente de verificación
-    update: { ...data, verificationStatus: "PENDING", verifiedAt: null },
-    select: { id: true, verificationStatus: true, licenseExpirationDate: true },
+export const actualizarDocumentosCifradosRenter = async (
+  userId: string,
+  data: {
+    licenseExpirationDate: Date;
+    documentFrontEnc: Uint8Array<ArrayBuffer>;
+    documentBackEnc: Uint8Array<ArrayBuffer>;
+    licenseFrontEnc: Uint8Array<ArrayBuffer>;
+    licenseBackEnc: Uint8Array<ArrayBuffer>;
+  }
+) =>
+  prisma.renter.update({
+    where: { idUser: userId },
+    data: {
+      ...data,
+      estadoVerificacion: "PENDING",
+      fechaVerificacion: null,
+    },
+    select: { id: true, estadoVerificacion: true, licenseExpirationDate: true },
   });
 
 // ===== MOTO ===== //
 export const buscarMotoConDueno = async (motoId: string) =>
   prisma.moto.findUnique({
     where: { id: motoId },
-    include: { owner: { select: { userId: true } } },
+    include: { owner: { select: { idUser: true } } },
   });
 
-export const upsertDocumentoLegal = async (motoId: string, type: TipoLegal, data: any) =>
+export const upsertDocumentoLegal = async (
+  motoId: string,
+  type: TipoLegal,
+  data: { number: string | null; expiresAt: Date | null; fileEnc: Uint8Array<ArrayBuffer> }
+) =>
   prisma.motoLegalDocument.upsert({
     where: { motoId_type: { motoId, type } },
     create: { motoId, type, ...data },
@@ -40,7 +55,10 @@ export const listarDocumentosLegales = async (motoId: string) =>
   });
 
 // ===== IMÁGENES ===== //
-export const crearImagenMoto = async (motoId: string, data: { data: Buffer; mime: string; isPrimary: boolean }) =>
+export const crearImagenMoto = async (
+  motoId: string,
+  data: { data: Buffer; mime: string; isPrimary: boolean }
+) =>
   prisma.motoImage.create({
     data: { motoId, ...data, data: new Uint8Array(data.data) },
     select: { id: true, mime: true, isPrimary: true },

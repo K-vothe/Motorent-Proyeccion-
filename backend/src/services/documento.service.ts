@@ -18,43 +18,54 @@ type TipoLegal = (typeof TIPOS_LEGALES)[number];
 const REQUIEREN_VIGENCIA: TipoLegal[] = ["SOAT", "TECHNICAL_REVIEW", "INSURANCE"];
 const OBLIGATORIOS: TipoLegal[] = ["TRANSIT_LICENSE", "SOAT", "TECHNICAL_REVIEW"];
 
-// ===================== CLIENTE ===================== //
+// ===================== ARRENDATARIO ===================== //
 
-export const guardarDocumentosCliente = async (userId: string, body: any) => {
+export const guardarDocumentosCliente = async (userId: string, body: Record<string, unknown>) => {
   const {
-    documentNumber, licenseNumber, licenseCategory, licenseExpirationDate,
-    documentFront, documentBack, licenseFront, licenseBack,
+    licenseExpirationDate,
+    documentFront,
+    documentBack,
+    licenseFront,
+    licenseBack,
   } = body ?? {};
 
-  if (!documentNumber || !licenseNumber || !licenseCategory || !licenseExpirationDate) {
-    throw new Error("Faltan datos del documento o de la licencia");
+  if (!licenseExpirationDate) {
+    throw new AppError("La fecha de vencimiento de la licencia es obligatoria", 400);
   }
 
-  const vence = new Date(licenseExpirationDate);
-  if (isNaN(vence.getTime()) || vence <= new Date()) {
-    throw new Error("La licencia de conducción está vencida o la fecha es inválida");
+  const vence = new Date(String(licenseExpirationDate));
+  if (Number.isNaN(vence.getTime()) || vence <= new Date()) {
+    throw new AppError("La licencia de conducción está vencida o la fecha es inválida", 400);
   }
 
-  return repo.upsertCliente(userId, {
-    documentNumber: String(documentNumber).trim(),
-    licenseNumber: String(licenseNumber).trim(),
-    licenseCategory: String(licenseCategory).trim().toUpperCase(),
+  const renter = await repo.buscarClientePorUserId(userId);
+  if (!renter) {
+    throw new AppError("Primero debes registrar tu perfil de arrendatario", 404);
+  }
+
+  return repo.actualizarDocumentosCifradosRenter(userId, {
     licenseExpirationDate: vence,
-    documentFrontEnc: encryptFile(parseDataUrl(documentFront)),
-    documentBackEnc: encryptFile(parseDataUrl(documentBack)),
-    licenseFrontEnc: encryptFile(parseDataUrl(licenseFront)),
-    licenseBackEnc: encryptFile(parseDataUrl(licenseBack)),
+    documentFrontEnc: new Uint8Array(encryptFile(parseDataUrl(documentFront))),
+    documentBackEnc: new Uint8Array(encryptFile(parseDataUrl(documentBack))),
+    licenseFrontEnc: new Uint8Array(encryptFile(parseDataUrl(licenseFront))),
+    licenseBackEnc: new Uint8Array(encryptFile(parseDataUrl(licenseBack))),
   });
 };
 
-export const obtenerArchivoCliente = async (requester: Requester, userIdParam: string, campo: string) => {
+export const obtenerArchivoCliente = async (
+  requester: Requester,
+  userIdParam: string,
+  campo: string
+) => {
   const duenoId = userIdParam === "me" ? requester.id : userIdParam;
   if (duenoId !== requester.id && requester.role !== "ADMIN") {
     throw new AppError("No autorizado para ver este documento", 403);
   }
 
   const columna = CAMPOS_CLIENTE[campo as CampoCliente];
-  if (!columna) throw new AppError(`Campo inválido. Usa: ${Object.keys(CAMPOS_CLIENTE).join(", ")}`, 400);
+  if (!columna) {
+    throw new AppError(`Campo inválido. Usa: ${Object.keys(CAMPOS_CLIENTE).join(", ")}`, 400);
+  }
 
   const cliente = await repo.buscarClientePorUserId(duenoId);
   const blob = cliente?.[columna];
@@ -68,7 +79,7 @@ export const obtenerArchivoCliente = async (requester: Requester, userIdParam: s
 const verificarAccesoMoto = async (requester: Requester, motoId: string) => {
   const moto = await repo.buscarMotoConDueno(motoId);
   if (!moto) throw new AppError("Moto no encontrada", 404);
-  if (requester.role !== "ADMIN" && moto.owner?.userId !== requester.id) {
+  if (requester.role !== "ADMIN" && moto.owner?.idUser !== requester.id) {
     throw new AppError("No tienes permiso sobre esta moto", 403);
   }
   return moto;
@@ -82,27 +93,36 @@ const validarTipoLegal = (raw: string): TipoLegal => {
   return tipo;
 };
 
-export const guardarDocumentoLegal = async (requester: Requester, motoId: string, tipoRaw: string, body: any) => {
+export const guardarDocumentoLegal = async (
+  requester: Requester,
+  motoId: string,
+  tipoRaw: string,
+  body: Record<string, unknown>
+) => {
   await verificarAccesoMoto(requester, motoId);
   const tipo = validarTipoLegal(tipoRaw);
   const { number, expiresAt, file } = body ?? {};
 
   let vence: Date | null = null;
   if (REQUIEREN_VIGENCIA.includes(tipo)) {
-    vence = new Date(expiresAt);
-    if (isNaN(vence.getTime()) || vence <= new Date()) {
-      throw new Error("La fecha de vencimiento es inválida o el documento ya está vencido");
+    vence = new Date(String(expiresAt));
+    if (Number.isNaN(vence.getTime()) || vence <= new Date()) {
+      throw new AppError("La fecha de vencimiento es inválida o el documento ya está vencido", 400);
     }
   }
 
   return repo.upsertDocumentoLegal(motoId, tipo, {
     number: number ? String(number).trim() : null,
     expiresAt: vence,
-    fileEnc: encryptFile(parseDataUrl(file)),
+    fileEnc: new Uint8Array(encryptFile(parseDataUrl(file))),
   });
 };
 
-export const obtenerDocumentoLegal = async (requester: Requester, motoId: string, tipoRaw: string) => {
+export const obtenerDocumentoLegal = async (
+  requester: Requester,
+  motoId: string,
+  tipoRaw: string
+) => {
   await verificarAccesoMoto(requester, motoId);
   const doc = await repo.buscarDocumentoLegal(motoId, validarTipoLegal(tipoRaw));
   if (!doc) throw new AppError("Documento no encontrado", 404);
@@ -114,7 +134,7 @@ export const motoCumpleDocumentos = async (motoId: string) => {
   const ahora = new Date();
 
   const faltantes = OBLIGATORIOS.filter((tipo) => {
-    const d = docs.find((x) => x.type === tipo);
+    const d = docs.find((item) => item.type === tipo);
     if (!d) return true;
     if (REQUIEREN_VIGENCIA.includes(tipo) && (!d.expiresAt || d.expiresAt <= ahora)) return true;
     return false;
@@ -137,12 +157,20 @@ export const consultarDisponibilidad = async (motoId: string) => {
 
 // ===================== MOTO: IMÁGENES ===================== //
 
-export const guardarImagenMoto = async (requester: Requester, motoId: string, body: any) => {
+export const guardarImagenMoto = async (
+  requester: Requester,
+  motoId: string,
+  body: Record<string, unknown>
+) => {
   await verificarAccesoMoto(requester, motoId);
   const { mime, buffer } = parseDataUrl(body?.image, {
     allowed: ["image/jpeg", "image/png", "image/webp"],
   });
-  return repo.crearImagenMoto(motoId, { data: buffer, mime, isPrimary: body?.isPrimary === true });
+  return repo.crearImagenMoto(motoId, {
+    data: buffer,
+    mime,
+    isPrimary: body?.isPrimary === true,
+  });
 };
 
 export const listarImagenes = async (motoId: string) => repo.listarImagenesMoto(motoId);

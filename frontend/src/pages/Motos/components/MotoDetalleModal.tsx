@@ -22,6 +22,7 @@ import {
   obtenerResenasMoto,
   type ResenasMotoData,
 } from "../../../services/resenas.service";
+import { solicitarRentaApi } from "../../../services/rentas.service";
 import {
   calcularDiasRenta,
   clasificarCilindraje,
@@ -73,6 +74,22 @@ function MotoDetalleModal({
   const [fechaInicio, setFechaInicio] = useState(hoy);
   const [fechaFin, setFechaFin] = useState(hoy);
   const [reservaConfirmada, setReservaConfirmada] = useState<string | null>(null);
+  const [errorReserva, setErrorReserva] = useState<string | null>(null);
+  const [enviandoReserva, setEnviandoReserva] = useState(false);
+
+  async function manejarSolicitarRenta() {
+    setErrorReserva(null);
+    setEnviandoReserva(true);
+    const res = await solicitarRentaApi(String(moto.id), fechaInicio, fechaFin);
+    setEnviandoReserva(false);
+    if (!res.ok) {
+      setErrorReserva(res.mensaje);
+      return;
+    }
+    setReservaConfirmada(
+      `Solicitud creada para ${titulo} (${diasRenta} ${diasRenta === 1 ? "día" : "días"}). Continúa en Mis rentas para firmar el contrato y confirmar el pago.`
+    );
+  }
 
   // 1. Cargar galería y reseñas verificadas desde el backend
   useEffect(() => {
@@ -361,20 +378,31 @@ function MotoDetalleModal({
             ) : reservaConfirmada ? (
               <div className="md-booking-success">
                 <IconCheckCircle size={18} />
-                <span>{reservaConfirmada}</span>
+                <div>
+                  <span>{reservaConfirmada}</span>
+                  <div style={{ marginTop: 10 }}>
+                    <Link to="/rentas" className="md-btn-primary" onClick={onCerrar}>
+                      Ir a Mis rentas →
+                    </Link>
+                  </div>
+                </div>
               </div>
             ) : (
-              <button
-                type="button"
-                className="md-btn-primary"
-                onClick={() =>
-                  setReservaConfirmada(
-                    `Solicitud registrada: ${titulo}, ${diasRenta} ${diasRenta === 1 ? "día" : "días"}.`
-                  )
-                }
-              >
-                Solicitar renta
-              </button>
+              <>
+                {errorReserva && (
+                  <p className="md-booking-error" role="alert" style={{ color: "#dc2626", fontSize: 13, margin: "0 0 10px" }}>
+                    {errorReserva}
+                  </p>
+                )}
+                <button
+                  type="button"
+                  className="md-btn-primary"
+                  disabled={enviandoReserva}
+                  onClick={manejarSolicitarRenta}
+                >
+                  {enviandoReserva ? "Creando solicitud..." : "Solicitar renta"}
+                </button>
+              </>
             )}
 
             <p className="md-booking-foot">

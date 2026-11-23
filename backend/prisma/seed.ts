@@ -60,6 +60,35 @@ async function main() {
   const pngBuffer = Buffer.from(PNG_DEMO_BASE64, "base64");
 
   // --------------------------------------------------------------------------
+  // 0. CLÁUSULAS LEGALES VIGENTES PARA CONTRATOS (FASE 9)
+  // --------------------------------------------------------------------------
+  const clausulasBase = [
+    {
+      title: "1. Uso autorizado de la motocicleta",
+      body: "El arrendatario se compromete a utilizar la motocicleta únicamente para fines personales y lícitos, respetando el Código Nacional de Tránsito y sin subarrendar el vehículo a terceros.",
+    },
+    {
+      title: "2. Documentos, licencia y responsabilidad vial",
+      body: "El arrendatario declara contar con licencia de conducción vigente (A1/A2 según cilindraje) y asume el pago de comparendos, infracciones o inmovilizaciones generadas durante el período de renta.",
+    },
+    {
+      title: "3. Inspección de entrega (PICKUP) y devolución (RETURN)",
+      body: "Ambas partes verifican el kilometraje, nivel de combustible y estado estético al inicio y al final de la renta mediante actas y evidencia fotográfica registrada en la plataforma.",
+    },
+    {
+      title: "4. Daños, hurto e incidentes",
+      body: "Ante accidente, daño mecánico por mal uso, pérdida o hurto, cualquiera de las partes debe reportar el incidente de inmediato desde MotoRent para activar el protocolo de bloqueo y soporte.",
+    },
+  ];
+
+  for (const cl of clausulasBase) {
+    const existe = await prisma.clause.findFirst({ where: { title: cl.title } });
+    if (!existe) {
+      await prisma.clause.create({ data: { ...cl, version: 1, active: true } });
+    }
+  }
+
+  // --------------------------------------------------------------------------
   // 1. USUARIOS DEMO (ADMIN, 2 OWNERS, 1 RENTER, 1 USUARIO PENDIENTE)
   // --------------------------------------------------------------------------
   const admin = await prisma.user.upsert({
